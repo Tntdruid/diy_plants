@@ -14,13 +14,35 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 ## Current features
 
 - Manual entity selection without device-class filtering
-- Soil moisture, conductivity, temperature, humidity, illuminance, and DLI
+- Soil moisture, conductivity, soil temperature, air temperature, humidity, and illuminance
+- DLI calculated automatically from illuminance using a lux-to-PPFD conversion
 - Configurable minimum and maximum limits
 - Immediate updates when source sensors change
 - Health entity with per-measurement status and diagnostics
 - Raw source values preserved in attributes for troubleshooting
 - Duplicate sensor protection so the same entity cannot be assigned to multiple measurements
 - Danish and English translations for the config flow
+
+## Flower Card
+
+Use the Lovelace Flower Card together with Olen's Plant Monitor integration.
+Select the DIY Plants sensor entities as the source sensors in Plant Monitor,
+then add a card such as:
+
+```yaml
+type: custom:flower-card
+entity: plant.my_plant
+show_bars:
+	- moisture
+	- conductivity
+	- temperature
+	- illuminance
+	- humidity
+	- dli
+```
+
+The `plant.<name>` entity is provided by Plant Monitor, which also supplies the
+Flower Card websocket data and optional OpenPlantbook species information.
 
 ## Calibration
 

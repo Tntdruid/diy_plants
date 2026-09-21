@@ -9,10 +9,16 @@ CONF_PLANT_NAME = "plant_name"
 CONF_MOISTURE_SENSOR = "moisture_sensor"
 CONF_CONDUCTIVITY_SENSOR = "conductivity_sensor"
 CONF_TEMPERATURE_SENSOR = "temperature_sensor"
+CONF_AIR_TEMPERATURE_SENSOR = "air_temperature_sensor"
 CONF_HUMIDITY_SENSOR = "humidity_sensor"
 CONF_ILLUMINANCE_SENSOR = "illuminance_sensor"
 CONF_DLI_SENSOR = "dli_sensor"
 CONF_LIMITS = "limits"
+CONF_PLANTBOOK_API_KEY = "plantbook_api_key"
+CONF_PLANTBOOK_PLANT_ID = "plantbook_plant_id"
+CONF_PLANTBOOK_ENABLED = "plantbook_enabled"
+CONF_PLANTBOOK_PLANT_NAME = "plantbook_plant_name"
+DEFAULT_LUX_TO_PPFD = 0.0185
 
 METRICS = {
     "moisture": {
@@ -31,7 +37,14 @@ METRICS = {
     },
     "temperature": {
         "config": CONF_TEMPERATURE_SENSOR,
-        "label": "Temperature",
+        "label": "Soil temperature",
+        "unit": "°C",
+        "minimum": 10.0,
+        "maximum": 35.0,
+    },
+    "air_temperature": {
+        "config": CONF_AIR_TEMPERATURE_SENSOR,
+        "label": "Air temperature",
         "unit": "°C",
         "minimum": 10.0,
         "maximum": 35.0,

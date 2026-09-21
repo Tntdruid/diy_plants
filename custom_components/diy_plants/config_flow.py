@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import ATTR_DOMAIN
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import selector
 
 from .const import (
     CONF_CONDUCTIVITY_SENSOR,
-    CONF_DLI_SENSOR,
+    CONF_AIR_TEMPERATURE_SENSOR,
     CONF_HUMIDITY_SENSOR,
     CONF_ILLUMINANCE_SENSOR,
     CONF_MOISTURE_SENSOR,
+    CONF_PLANTBOOK_API_KEY,
+    CONF_PLANTBOOK_ENABLED,
+    CONF_PLANTBOOK_PLANT_ID,
+    CONF_PLANTBOOK_PLANT_NAME,
     CONF_PLANT_NAME,
     CONF_TEMPERATURE_SENSOR,
     DOMAIN,
@@ -24,15 +27,20 @@ SENSOR_KEYS = {
     CONF_MOISTURE_SENSOR,
     CONF_CONDUCTIVITY_SENSOR,
     CONF_TEMPERATURE_SENSOR,
+    CONF_AIR_TEMPERATURE_SENSOR,
     CONF_HUMIDITY_SENSOR,
     CONF_ILLUMINANCE_SENSOR,
-    CONF_DLI_SENSOR,
 }
 
 
-SENSOR_SELECTOR = selector.EntitySelector(
-    selector.EntitySelectorConfig(domain="sensor", multiple=False)
-)
+def _sensor_selector():
+    """Return a selector that accepts any sensor entity."""
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(
+            domain="sensor",
+            multiple=False,
+        )
+    )
 
 
 def _validate_unique_sensor_selection(data: dict) -> dict[str, str]:
@@ -55,12 +63,25 @@ def _base_schema(current: dict | None = None) -> dict:
     """Return the standard sensor and limit fields for creation and options."""
     current = current or {}
     schema = {
-        vol.Optional(CONF_MOISTURE_SENSOR, default=current.get(CONF_MOISTURE_SENSOR, "")): SENSOR_SELECTOR,
-        vol.Optional(CONF_CONDUCTIVITY_SENSOR, default=current.get(CONF_CONDUCTIVITY_SENSOR, "")): SENSOR_SELECTOR,
-        vol.Optional(CONF_TEMPERATURE_SENSOR, default=current.get(CONF_TEMPERATURE_SENSOR, "")): SENSOR_SELECTOR,
-        vol.Optional(CONF_HUMIDITY_SENSOR, default=current.get(CONF_HUMIDITY_SENSOR, "")): SENSOR_SELECTOR,
-        vol.Optional(CONF_ILLUMINANCE_SENSOR, default=current.get(CONF_ILLUMINANCE_SENSOR, "")): SENSOR_SELECTOR,
-        vol.Optional(CONF_DLI_SENSOR, default=current.get(CONF_DLI_SENSOR, "")): SENSOR_SELECTOR,
+        vol.Optional(
+            CONF_MOISTURE_SENSOR, default=current.get(CONF_MOISTURE_SENSOR, "")
+        ): _sensor_selector(),
+        vol.Optional(
+            CONF_CONDUCTIVITY_SENSOR, default=current.get(CONF_CONDUCTIVITY_SENSOR, "")
+        ): _sensor_selector(),
+        vol.Optional(
+            CONF_TEMPERATURE_SENSOR, default=current.get(CONF_TEMPERATURE_SENSOR, "")
+        ): _sensor_selector(),
+        vol.Optional(
+            CONF_AIR_TEMPERATURE_SENSOR,
+            default=current.get(CONF_AIR_TEMPERATURE_SENSOR, ""),
+        ): _sensor_selector(),
+        vol.Optional(
+            CONF_HUMIDITY_SENSOR, default=current.get(CONF_HUMIDITY_SENSOR, "")
+        ): _sensor_selector(),
+        vol.Optional(
+            CONF_ILLUMINANCE_SENSOR, default=current.get(CONF_ILLUMINANCE_SENSOR, "")
+        ): _sensor_selector(),
     }
     for metric, spec in METRICS.items():
         schema[vol.Optional(f"{metric}_min", default=current.get(f"{metric}_min", spec["minimum"]))] = vol.Coerce(float)
@@ -110,16 +131,17 @@ def _calibration_schema(current: dict | None = None) -> dict:
     return schema
 
 
-class DiyPlantsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle setup of a DIY plant."""
 
     VERSION = 1
+    DOMAIN = DOMAIN
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
         """Return the options flow."""
-        return DiyPlantsOptionsFlow(config_entry)
+        return DiyPlantsOptionsFlow()
 
     async def async_step_user(self, user_input=None):
         """Create a plant."""
@@ -135,6 +157,10 @@ class DiyPlantsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = {
             vol.Required(CONF_PLANT_NAME, default=(user_input or {}).get(CONF_PLANT_NAME, "")): str,
+            vol.Optional(CONF_PLANTBOOK_ENABLED, default=(user_input or {}).get(CONF_PLANTBOOK_ENABLED, False)): selector.BooleanSelector(),
+            vol.Optional(CONF_PLANTBOOK_API_KEY, default=(user_input or {}).get(CONF_PLANTBOOK_API_KEY, "")): str,
+            vol.Optional(CONF_PLANTBOOK_PLANT_ID, default=(user_input or {}).get(CONF_PLANTBOOK_PLANT_ID, "")): str,
+            vol.Optional(CONF_PLANTBOOK_PLANT_NAME, default=(user_input or {}).get(CONF_PLANTBOOK_PLANT_NAME, "")): str,
         }
         schema.update(_base_schema(user_input or {}))
         schema.update(_calibration_schema(user_input or {}))
@@ -149,9 +175,6 @@ class DiyPlantsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class DiyPlantsOptionsFlow(config_entries.OptionsFlow):
     """Configure sensors after setup."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input=None):
         """Update the selected sensors."""
         if user_input is not None:
@@ -162,17 +185,26 @@ class DiyPlantsOptionsFlow(config_entries.OptionsFlow):
                     data_schema=vol.Schema({**_base_schema(user_input), **_calibration_schema(user_input)}),
                     errors=errors,
                 )
-            data = dict(self.config_entry.data)
+            options = dict(self.config_entry.options)
             for key, value in user_input.items():
                 if key in SENSOR_KEYS and not value:
-                    data.pop(key, None)
+                    options[key] = None
                 else:
-                    data[key] = value
-            self.hass.config_entries.async_update_entry(self.config_entry, data=data)
-            return self.async_create_entry(title="", data={})
+                    options[key] = value
+            return self.async_update_reload_and_abort(
+                self.config_entry,
+                options=options,
+            )
 
-        current = self.config_entry.data
-        schema = {**_base_schema(current), **_calibration_schema(current)}
+        current = {**self.config_entry.data, **self.config_entry.options}
+        schema = {
+            vol.Optional(CONF_PLANTBOOK_ENABLED, default=current.get(CONF_PLANTBOOK_ENABLED, False)): selector.BooleanSelector(),
+            vol.Optional(CONF_PLANTBOOK_API_KEY, default=current.get(CONF_PLANTBOOK_API_KEY, "")): str,
+            vol.Optional(CONF_PLANTBOOK_PLANT_ID, default=current.get(CONF_PLANTBOOK_PLANT_ID, "")): str,
+            vol.Optional(CONF_PLANTBOOK_PLANT_NAME, default=current.get(CONF_PLANTBOOK_PLANT_NAME, "")): str,
+        }
+        schema.update(_base_schema(current))
+        schema.update(_calibration_schema(current))
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema),

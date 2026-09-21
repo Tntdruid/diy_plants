@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">DIY Plants</title>
+  <desc id="desc">A green leaf with a sunlight measurement pulse</desc>
+  <rect width="128" height="128" rx="28" fill="#173f35"/>
+  <path d="M91 22C61 25 39 40 35 65c-3 19 9 31 25 31 25 0 37-27 31-74Z" fill="#79c267"/>
+  <path d="M31 101c13-24 31-40 55-57" fill="none" stroke="#d9f2c7" stroke-linecap="round" stroke-width="6"/>
+  <path d="M18 91h17l7-16 9 25 9-21 8 12h25" fill="none" stroke="#f4c95d" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+</svg>
