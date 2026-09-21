@@ -1,0 +1,11 @@
+{
+  "domain": "diy_plants",
+  "name": "DIY Plants",
+  "version": "0.2.0",
+  "documentation": "https://github.com/ChristianMahlberg/MyPlants",
+  "issue_tracker": "https://github.com/ChristianMahlberg/MyPlants/issues",
+  "codeowners": ["@ChristianMahlberg"],
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "requirements": []
+}
