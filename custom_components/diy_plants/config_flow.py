@@ -51,29 +51,62 @@ def _validate_unique_sensor_selection(data: dict) -> dict[str, str]:
     return errors
 
 
+def _base_schema(current: dict | None = None) -> dict:
+    """Return the standard sensor and limit fields for creation and options."""
+    current = current or {}
+    schema = {
+        vol.Optional(CONF_MOISTURE_SENSOR, default=current.get(CONF_MOISTURE_SENSOR, "")): SENSOR_SELECTOR,
+        vol.Optional(CONF_CONDUCTIVITY_SENSOR, default=current.get(CONF_CONDUCTIVITY_SENSOR, "")): SENSOR_SELECTOR,
+        vol.Optional(CONF_TEMPERATURE_SENSOR, default=current.get(CONF_TEMPERATURE_SENSOR, "")): SENSOR_SELECTOR,
+        vol.Optional(CONF_HUMIDITY_SENSOR, default=current.get(CONF_HUMIDITY_SENSOR, "")): SENSOR_SELECTOR,
+        vol.Optional(CONF_ILLUMINANCE_SENSOR, default=current.get(CONF_ILLUMINANCE_SENSOR, "")): SENSOR_SELECTOR,
+        vol.Optional(CONF_DLI_SENSOR, default=current.get(CONF_DLI_SENSOR, "")): SENSOR_SELECTOR,
+    }
+    for metric, spec in METRICS.items():
+        schema[vol.Optional(f"{metric}_min", default=current.get(f"{metric}_min", spec["minimum"]))] = vol.Coerce(float)
+        schema[vol.Optional(f"{metric}_max", default=current.get(f"{metric}_max", spec["maximum"]))] = vol.Coerce(float)
+    return schema
+
+
+def _metric_calibration_fields(metric: str, current: dict | None = None) -> dict:
+    """Return calibration fields for one metric, only when enabled."""
+    current = current or {}
+    enabled_key = f"{metric}_calibration_enabled"
+    schema = {
+        vol.Optional(
+            enabled_key,
+            default=current.get(enabled_key, False),
+        ): selector.BooleanSelector(),
+    }
+    if not current.get(enabled_key, False):
+        return schema
+    schema.update(
+        {
+            vol.Optional(
+                f"{metric}_raw_min", default=current.get(f"{metric}_raw_min", 0)
+            ): vol.Coerce(float),
+            vol.Optional(
+                f"{metric}_raw_max", default=current.get(f"{metric}_raw_max", 100)
+            ): vol.Coerce(float),
+            vol.Optional(
+                f"{metric}_calibrated_min",
+                default=current.get(f"{metric}_calibrated_min", 0),
+            ): vol.Coerce(float),
+            vol.Optional(
+                f"{metric}_calibrated_max",
+                default=current.get(f"{metric}_calibrated_max", 100),
+            ): vol.Coerce(float),
+        }
+    )
+    return schema
+
+
 def _calibration_schema(current: dict | None = None) -> dict:
     """Build optional linear calibration fields for every measurement."""
     current = current or {}
     schema = {}
     for metric in METRICS:
-        schema[vol.Optional(
-            f"{metric}_calibration_enabled",
-            default=current.get(f"{metric}_calibration_enabled", False),
-        )] = selector.BooleanSelector()
-        schema[vol.Optional(
-            f"{metric}_raw_min", default=current.get(f"{metric}_raw_min", 0)
-        )] = vol.Coerce(float)
-        schema[vol.Optional(
-            f"{metric}_raw_max", default=current.get(f"{metric}_raw_max", 100)
-        )] = vol.Coerce(float)
-        schema[vol.Optional(
-            f"{metric}_calibrated_min",
-            default=current.get(f"{metric}_calibrated_min", 0),
-        )] = vol.Coerce(float)
-        schema[vol.Optional(
-            f"{metric}_calibrated_max",
-            default=current.get(f"{metric}_calibrated_max", 100),
-        )] = vol.Coerce(float)
+        schema.update(_metric_calibration_fields(metric, current))
     return schema
 
 
@@ -92,7 +125,7 @@ class DiyPlantsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Create a plant."""
         errors = {}
         if user_input is not None:
-            name = user_input[CONF_PLANT_NAME].strip()
+            name = user_input.get(CONF_PLANT_NAME, "").strip()
             if not name:
                 errors[CONF_PLANT_NAME] = "name_required"
             else:
@@ -101,18 +134,10 @@ class DiyPlantsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.async_create_entry(title=name, data=user_input)
 
         schema = {
-            vol.Required(CONF_PLANT_NAME): str,
-            vol.Optional(CONF_MOISTURE_SENSOR): SENSOR_SELECTOR,
-            vol.Optional(CONF_CONDUCTIVITY_SENSOR): SENSOR_SELECTOR,
-            vol.Optional(CONF_TEMPERATURE_SENSOR): SENSOR_SELECTOR,
-            vol.Optional(CONF_HUMIDITY_SENSOR): SENSOR_SELECTOR,
-            vol.Optional(CONF_ILLUMINANCE_SENSOR): SENSOR_SELECTOR,
-            vol.Optional(CONF_DLI_SENSOR): SENSOR_SELECTOR,
+            vol.Required(CONF_PLANT_NAME, default=(user_input or {}).get(CONF_PLANT_NAME, "")): str,
         }
-        for metric, spec in METRICS.items():
-            schema[vol.Optional(f"{metric}_min", default=spec["minimum"])] = vol.Coerce(float)
-            schema[vol.Optional(f"{metric}_max", default=spec["maximum"])] = vol.Coerce(float)
-        schema.update(_calibration_schema())
+        schema.update(_base_schema(user_input or {}))
+        schema.update(_calibration_schema(user_input or {}))
 
         return self.async_show_form(
             step_id="user",
@@ -132,40 +157,9 @@ class DiyPlantsOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             errors = _validate_unique_sensor_selection(user_input)
             if errors:
-                current = self.config_entry.data
-                schema = {
-                    vol.Optional(
-                        CONF_MOISTURE_SENSOR,
-                        default=current.get(CONF_MOISTURE_SENSOR, ""),
-                    ): SENSOR_SELECTOR,
-                    vol.Optional(
-                        CONF_CONDUCTIVITY_SENSOR,
-                        default=current.get(CONF_CONDUCTIVITY_SENSOR, ""),
-                    ): SENSOR_SELECTOR,
-                    vol.Optional(
-                        CONF_TEMPERATURE_SENSOR,
-                        default=current.get(CONF_TEMPERATURE_SENSOR, ""),
-                    ): SENSOR_SELECTOR,
-                    vol.Optional(
-                        CONF_HUMIDITY_SENSOR,
-                        default=current.get(CONF_HUMIDITY_SENSOR, ""),
-                    ): SENSOR_SELECTOR,
-                    vol.Optional(
-                        CONF_ILLUMINANCE_SENSOR,
-                        default=current.get(CONF_ILLUMINANCE_SENSOR, ""),
-                    ): SENSOR_SELECTOR,
-                    vol.Optional(
-                        CONF_DLI_SENSOR,
-                        default=current.get(CONF_DLI_SENSOR, ""),
-                    ): SENSOR_SELECTOR,
-                }
-                for metric, spec in METRICS.items():
-                    schema[vol.Optional(f"{metric}_min", default=current.get(f"{metric}_min", spec["minimum"]))] = vol.Coerce(float)
-                    schema[vol.Optional(f"{metric}_max", default=current.get(f"{metric}_max", spec["maximum"]))] = vol.Coerce(float)
-                schema.update(_calibration_schema(current))
                 return self.async_show_form(
                     step_id="init",
-                    data_schema=vol.Schema(schema),
+                    data_schema=vol.Schema({**_base_schema(user_input), **_calibration_schema(user_input)}),
                     errors=errors,
                 )
             data = dict(self.config_entry.data)
@@ -178,37 +172,7 @@ class DiyPlantsOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data={})
 
         current = self.config_entry.data
-        schema = {
-            vol.Optional(
-                CONF_MOISTURE_SENSOR,
-                default=current.get(CONF_MOISTURE_SENSOR, ""),
-            ): SENSOR_SELECTOR,
-            vol.Optional(
-                CONF_CONDUCTIVITY_SENSOR,
-                default=current.get(CONF_CONDUCTIVITY_SENSOR, ""),
-            ): SENSOR_SELECTOR,
-            vol.Optional(
-                CONF_TEMPERATURE_SENSOR,
-                default=current.get(CONF_TEMPERATURE_SENSOR, ""),
-            ): SENSOR_SELECTOR,
-            vol.Optional(
-                CONF_HUMIDITY_SENSOR,
-                default=current.get(CONF_HUMIDITY_SENSOR, ""),
-            ): SENSOR_SELECTOR,
-            vol.Optional(
-                CONF_ILLUMINANCE_SENSOR,
-                default=current.get(CONF_ILLUMINANCE_SENSOR, ""),
-            ): SENSOR_SELECTOR,
-            vol.Optional(
-                CONF_DLI_SENSOR,
-                default=current.get(CONF_DLI_SENSOR, ""),
-            ): SENSOR_SELECTOR,
-        }
-        for metric, spec in METRICS.items():
-            schema[vol.Optional(f"{metric}_min", default=current.get(f"{metric}_min", spec["minimum"]))] = vol.Coerce(float)
-            schema[vol.Optional(f"{metric}_max", default=current.get(f"{metric}_max", spec["maximum"]))] = vol.Coerce(float)
-        schema.update(_calibration_schema(current))
-
+        schema = {**_base_schema(current), **_calibration_schema(current)}
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema),
