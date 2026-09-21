@@ -37,6 +37,14 @@ The mapping is linear and is clamped to the configured output range. The raw val
 
 The integration currently uses default limits as starting points. Calibration transforms, smoothing, hysteresis, and irrigation actions are planned next.
 
+## What’s new
+
+- Added DLI support as a plant metric
+- Added duplicate sensor protection to avoid assigning the same entity to multiple measurements
+- Added Danish and English translations for the config flow
+- Stabilized the config and options flow for calibration settings
+- Improved HACS compatibility metadata
+
 ## Notes
 
 - Each measurement is a single sensor field, so you can only assign one entity to each metric.
