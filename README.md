@@ -65,9 +65,18 @@ The health sensor's `plantbook_status` attribute shows how the lookup went:
 
 ## Dashboard card
 
-The integration ships its own Lovelace card, `custom:diy-plants-card`. It is loaded automatically when DIY Plants is set up, so you do not need to add a dashboard resource. Restart Home Assistant and refresh the browser after installing or updating.
+The integration ships its own Lovelace card, `custom:diy-plants-card`. When DIY Plants starts, it adds the dashboard resource `/diy_plants/diy-plants-card.js` for you and keeps its version up to date, so browsers load new card versions after an update. Restart Home Assistant and refresh the browser after installing or updating.
 
-If you previously installed the standalone DIY Plants card through HACS or `/config/www`, remove that dashboard resource; the bundled card replaces it.
+If your dashboard resources are managed in YAML, add the resource yourself:
+
+```yaml
+lovelace:
+  resources:
+    - url: /diy_plants/diy-plants-card.js
+      type: module
+```
+
+If you previously installed the standalone DIY Plants card through HACS or `/config/www`, remove that old resource; the bundled card replaces it.
 
 ### Usage
 
@@ -180,7 +189,7 @@ The integration currently uses default limits as starting points. Calibration tr
 ### 0.3.0
 
 - Fixed the OpenPlantbook lookup: it now waits for OpenPlantbook to load, uses the plant ID field, searches by name, and reports its result in `plantbook_status`.
-- The DIY Plants dashboard card is now bundled with the integration and loaded automatically.
+- The DIY Plants dashboard card is now bundled with the integration, and its dashboard resource is added automatically.
 - **Breaking:** the health sensor states are now `ok`, `attention`, `sensor_unavailable` and `no_sensors` (previously `OK`, `Attention`, `Unavailable` and `No sensors`). Update automations that compare against the old values.
 - Measurement and DLI sensors now have device and state classes, so they get long-term statistics, proper graphs and unit conversion. They are no longer hidden as diagnostic entities.
 - Entity names and health states are translated (Danish and English).

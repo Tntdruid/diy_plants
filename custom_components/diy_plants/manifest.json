@@ -1,7 +1,7 @@
 {
   "domain": "diy_plants",
   "name": "DIY Plants",
-  "after_dependencies": ["frontend"],
+  "after_dependencies": ["frontend", "lovelace"],
   "codeowners": ["@Tntdruid"],
   "config_flow": true,
   "dependencies": ["http"],
@@ -10,5 +10,5 @@
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/Tntdruid/diy_plants/issues",
   "requirements": [],
-  "version": "0.3.1"
+  "version": "0.3.2"
 }

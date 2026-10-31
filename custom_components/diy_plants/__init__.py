@@ -24,15 +24,45 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(CARD_URL, str(_CARD_PATH), cache_headers=False)]
     )
+    versioned_url = f"{CARD_URL}?v={await hass.async_add_executor_job(_card_digest)}"
     # frontend is an after_dependency: always there in a normal install, absent in tests.
     if "frontend" in hass.config.components:
         from homeassistant.components.frontend import add_extra_js_url
 
-        digest = await hass.async_add_executor_job(_card_digest)
-        add_extra_js_url(hass, f"{CARD_URL}?v={digest}")
+        add_extra_js_url(hass, versioned_url)
     else:
         _LOGGER.debug("frontend not loaded; card served at %s but not auto-loaded", CARD_URL)
+    # The extra module URL is not picked up by every frontend, so also keep a
+    # dashboard resource for the card.
+    await _async_ensure_card_resource(hass, versioned_url)
     return True
+
+
+async def _async_ensure_card_resource(hass: HomeAssistant, url: str) -> None:
+    """Add or update the card's dashboard resource when dashboards use storage mode."""
+    lovelace = hass.data.get("lovelace")
+    if isinstance(lovelace, dict):
+        mode = lovelace.get("resource_mode", lovelace.get("mode"))
+        resources = lovelace.get("resources")
+    else:
+        mode = getattr(lovelace, "resource_mode", None)
+        resources = getattr(lovelace, "resources", None)
+    if mode != "storage" or resources is None:
+        _LOGGER.debug("Dashboard resources are not in storage mode; add %s manually", CARD_URL)
+        return
+
+    if not resources.loaded:
+        await resources.async_load()
+        resources.loaded = True
+    for item in resources.async_items():
+        if item.get("url", "").split("?")[0] == CARD_URL:
+            if item["url"] != url:
+                await resources.async_update_item(
+                    item["id"], {"res_type": "module", "url": url}
+                )
+            return
+    await resources.async_create_item({"res_type": "module", "url": url})
+    _LOGGER.info("Added dashboard resource %s", url)
 
 
 def _card_digest() -> str:
