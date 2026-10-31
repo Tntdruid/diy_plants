@@ -2,6 +2,7 @@
   "name": "diy-plants-card",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "A Lovelace card for the Home Assistant DIY Plants integration",
   "module": "diy-plants-card.js",
   "scripts": {
