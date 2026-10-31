@@ -24,12 +24,25 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 - DLI calculated automatically from illuminance using a lux-to-PPFD conversion
 - Configurable minimum and maximum limits
 - Immediate updates when source sensors change
+- Measurement sensors with device and state classes, so Home Assistant keeps long-term statistics and shows them on dashboards
 - Health entity with per-measurement status and diagnostics
 - Health entity exposes the Plantbook plant image and species when Plantbook is enabled
 - Plantbook species lookup uses Home Assistant's OpenPlantbook integration; no API key is stored by DIY Plants
 - Raw source values preserved in attributes for troubleshooting
 - Duplicate sensor protection so the same entity cannot be assigned to multiple measurements
-- Danish and English translations for the config flow
+- Danish and English translations for the config flow, entity names and health states
+- Downloadable diagnostics for bug reports (**Settings > Devices & services > DIY Plants > ⋮ > Download diagnostics**)
+
+## Health states
+
+| State | Shown as | Meaning |
+|---|---|---|
+| `ok` | OK | All configured measurements are within their limits |
+| `attention` | Needs attention | At least one measurement is too low or too high |
+| `sensor_unavailable` | Sensor unavailable | At least one source sensor has no usable value |
+| `no_sensors` | No sensors | No source sensors are configured |
+
+Automations and templates should compare against the state value, for example `is_state('sensor.monstera_health', 'attention')`.
 
 ## Flower Card
 
@@ -72,6 +85,18 @@ The mapping is linear and is clamped to the configured output range. The raw val
 The integration currently uses default limits as starting points. Calibration transforms, smoothing, hysteresis, and irrigation actions are planned next.
 
 ## What’s new
+
+### 0.3.0
+
+- **Breaking:** the health sensor states are now `ok`, `attention`, `sensor_unavailable` and `no_sensors` (previously `OK`, `Attention`, `Unavailable` and `No sensors`). Update automations that compare against the old values.
+- Measurement and DLI sensors now have device and state classes, so they get long-term statistics, proper graphs and unit conversion. They are no longer hidden as diagnostic entities.
+- Entity names and health states are translated (Danish and English).
+- Fixed the DLI value being reset to 0 when Home Assistant restarts.
+- DLI now resets exactly at midnight instead of checking every minute.
+- Added downloadable diagnostics and hassfest validation.
+- Requires Home Assistant 2024.11 or newer.
+
+### Earlier
 
 - Suppressed low illuminance warnings after sunset; warnings resume at sunrise
 - Added DLI support as a plant metric

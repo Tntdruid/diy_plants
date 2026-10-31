@@ -1,6 +1,13 @@
 """Constants for the DIY Plants integration."""
 
-from homeassistant.const import Platform
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.const import (
+    LIGHT_LUX,
+    PERCENTAGE,
+    Platform,
+    UnitOfConductivity,
+    UnitOfTemperature,
+)
 
 DOMAIN = "diy_plants"
 PLATFORMS = [Platform.SENSOR]
@@ -27,42 +34,60 @@ METRICS = {
     "moisture": {
         "config": CONF_MOISTURE_SENSOR,
         "label": "Soil moisture",
-        "unit": "%",
+        "unit": PERCENTAGE,
+        "device_class": SensorDeviceClass.MOISTURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "precision": 1,
         "minimum": 20.0,
         "maximum": 70.0,
     },
     "conductivity": {
         "config": CONF_CONDUCTIVITY_SENSOR,
         "label": "Soil conductivity",
-        "unit": "µS/cm",
+        "unit": UnitOfConductivity.MICROSIEMENS_PER_CM,
+        "device_class": SensorDeviceClass.CONDUCTIVITY,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "precision": 0,
         "minimum": 300.0,
         "maximum": 2500.0,
     },
     "temperature": {
         "config": CONF_TEMPERATURE_SENSOR,
         "label": "Soil temperature",
-        "unit": "°C",
+        "unit": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "precision": 1,
         "minimum": 10.0,
         "maximum": 35.0,
     },
     "air_temperature": {
         "config": CONF_AIR_TEMPERATURE_SENSOR,
         "label": "Air temperature",
-        "unit": "°C",
+        "unit": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "precision": 1,
         "minimum": 10.0,
         "maximum": 35.0,
     },
     "humidity": {
         "config": CONF_HUMIDITY_SENSOR,
         "label": "Air humidity",
-        "unit": "%",
+        "unit": PERCENTAGE,
+        "device_class": SensorDeviceClass.HUMIDITY,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "precision": 1,
         "minimum": 30.0,
         "maximum": 80.0,
     },
     "illuminance": {
         "config": CONF_ILLUMINANCE_SENSOR,
         "label": "Illuminance",
-        "unit": "lx",
+        "unit": LIGHT_LUX,
+        "device_class": SensorDeviceClass.ILLUMINANCE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "precision": 0,
         "minimum": 100.0,
         "maximum": 100000.0,
     },
@@ -70,6 +95,9 @@ METRICS = {
         "config": CONF_DLI_SENSOR,
         "label": "DLI",
         "unit": "mol/m²/d",
+        "device_class": None,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "precision": 2,
         "minimum": 2.0,
         "maximum": 60.0,
     },

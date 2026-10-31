@@ -4,21 +4,24 @@ from __future__ import annotations
 
 import math
 import re
-from datetime import timedelta
 import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import (
     async_track_state_change_event,
-    async_track_time_interval,
+    async_track_time_change,
 )
 from homeassistant.helpers.typing import StateType
-from homeassistant.components.sensor import RestoreSensor, SensorEntity
+from homeassistant.components.sensor import (
+    RestoreSensor,
+    SensorDeviceClass,
+    SensorEntity,
+)
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -32,6 +35,12 @@ _LOGGER = logging.getLogger(__name__)
 
 _NUMBER_RE = re.compile(r"[-+]?\d+(?:[,.]\d+)?")
 _SUN_ENTITY = "sun.sun"
+
+HEALTH_OK = "ok"
+HEALTH_ATTENTION = "attention"
+HEALTH_SENSOR_UNAVAILABLE = "sensor_unavailable"
+HEALTH_NO_SENSORS = "no_sensors"
+HEALTH_STATES = [HEALTH_OK, HEALTH_ATTENTION, HEALTH_SENSOR_UNAVAILABLE, HEALTH_NO_SENSORS]
 
 
 def _number(value: StateType) -> float | None:
@@ -70,19 +79,6 @@ def _calibrate(value: float, entry: ConfigEntry, metric: str) -> float:
     calibrated = calibrated_min + ratio * (calibrated_max - calibrated_min)
     low, high = sorted((calibrated_min, calibrated_max))
     return max(low, min(high, calibrated))
-
-
-def _display_precision(metric: str) -> int:
-    """Return a useful display precision for a plant measurement."""
-    if metric in (
-        "moisture",
-        "conductivity",
-        "temperature",
-        "air_temperature",
-        "humidity",
-    ):
-        return 1
-    return 0
 
 
 def _entry_value(entry: ConfigEntry, key: str, default: Any = None) -> Any:
@@ -139,14 +135,14 @@ class DiyPlantEntity(SensorEntity):
         )
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> DeviceInfo:
         """Group all entities belonging to this plant."""
-        return {
-            "identifiers": {(DOMAIN, self.entry.entry_id)},
-            "name": self.plant_name,
-            "manufacturer": _entry_value(self.entry, CONF_DEVICE_LABEL, "DIY Plants"),
-            "model": "Flexible plant monitor",
-        }
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.entry.entry_id)},
+            name=self.plant_name,
+            manufacturer=_entry_value(self.entry, CONF_DEVICE_LABEL, "DIY Plants"),
+            model="Flexible plant monitor",
+        )
 
     async def async_added_to_hass(self) -> None:
         """Listen for source changes instead of waiting for a poll."""
@@ -168,25 +164,16 @@ class DiyPlantEntity(SensorEntity):
 class DiyPlantMetricSensor(DiyPlantEntity):
     """Expose a normalized source value and diagnostics."""
 
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, metric: str) -> None:
         super().__init__(hass, entry)
         self.metric = metric
         spec = METRICS[metric]
-        self._attr_name = spec["label"]
+        self._attr_translation_key = metric
         self._attr_unique_id = f"{entry.entry_id}-{metric}"
         self._attr_native_unit_of_measurement = spec["unit"]
-        icon_map = {
-            "moisture": "mdi:water-percent",
-            "conductivity": "mdi:leaf",
-            "temperature": "mdi:thermometer",
-            "air_temperature": "mdi:thermometer-lines",
-            "humidity": "mdi:water-percent",
-            "illuminance": "mdi:brightness-5",
-            "dli": "mdi:weather-sunny",
-        }
-        self._attr_icon = icon_map.get(metric, "mdi:sprout")
+        self._attr_device_class = spec["device_class"]
+        self._attr_state_class = spec["state_class"]
+        self._attr_suggested_display_precision = spec["precision"]
 
     @property
     def native_value(self) -> float | None:
@@ -194,7 +181,7 @@ class DiyPlantMetricSensor(DiyPlantEntity):
         value, _, _ = _value(
             self.hass, self._source_ids[self.metric], self.metric, self.entry
         )
-        return round(value, _display_precision(self.metric)) if value is not None else None
+        return value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -218,14 +205,15 @@ class DiyPlantMetricSensor(DiyPlantEntity):
 class DiyPlantDliSensor(DiyPlantEntity, RestoreSensor):
     """Calculate daily light integral from the configured illuminance sensor."""
 
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_translation_key = "dli"
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(hass, entry)
-        self._attr_name = METRICS["dli"]["label"]
+        spec = METRICS["dli"]
         self._attr_unique_id = f"{entry.entry_id}-dli"
-        self._attr_native_unit_of_measurement = METRICS["dli"]["unit"]
-        self._attr_icon = "mdi:weather-sunny"
+        self._attr_native_unit_of_measurement = spec["unit"]
+        self._attr_state_class = spec["state_class"]
+        self._attr_suggested_display_precision = spec["precision"]
         self._daily_dli = 0.0
         self._last_lux: float | None = None
         self._last_timestamp = None
@@ -234,7 +222,7 @@ class DiyPlantDliSensor(DiyPlantEntity, RestoreSensor):
     @property
     def native_value(self) -> float | None:
         """Return the accumulated DLI for the current calendar day."""
-        return round(self._daily_dli, 2)
+        return self._daily_dli
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -248,10 +236,11 @@ class DiyPlantDliSensor(DiyPlantEntity, RestoreSensor):
     async def async_added_to_hass(self) -> None:
         """Restore the accumulated value and track source/midnight updates."""
         await super().async_added_to_hass()
+        self._day = dt_util.now().date()
         last_state = await self.async_get_last_state()
         if last_state and last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
             try:
-                if dt_util.as_local(last_state.last_updated).date() == dt_util.now().date():
+                if dt_util.as_local(last_state.last_updated).date() == self._day:
                     self._daily_dli = float(last_state.state)
             except (AttributeError, TypeError, ValueError):
                 self._daily_dli = 0.0
@@ -264,8 +253,8 @@ class DiyPlantDliSensor(DiyPlantEntity, RestoreSensor):
                 )
             )
         self.async_on_remove(
-            async_track_time_interval(
-                self.hass, self._reset_at_midnight, timedelta(minutes=1)
+            async_track_time_change(
+                self.hass, self._reset_at_midnight, hour=0, minute=0, second=0
             )
         )
         self._update_from_source()
@@ -280,12 +269,12 @@ class DiyPlantDliSensor(DiyPlantEntity, RestoreSensor):
     def _reset_at_midnight(self, _now) -> None:
         """Reset the daily accumulator when the calendar day changes."""
         today = dt_util.now().date()
-        if self._day is not None and today != self._day:
+        if today != self._day:
             self._daily_dli = 0.0
             self._last_lux = None
             self._last_timestamp = None
-        self._day = today
-        self.async_write_ha_state()
+            self._day = today
+            self.async_write_ha_state()
 
     def _update_from_source(self) -> None:
         """Add the trapezoidal PPFD integral since the previous update."""
@@ -299,6 +288,8 @@ class DiyPlantDliSensor(DiyPlantEntity, RestoreSensor):
 
         now = state.last_updated
         local_date = dt_util.as_local(now).date()
+        if self._day is not None and local_date < self._day:
+            return
         if self._day != local_date:
             self._daily_dli = 0.0
             self._last_lux = None
@@ -317,7 +308,9 @@ class DiyPlantDliSensor(DiyPlantEntity, RestoreSensor):
 class DiyPlantHealthSensor(DiyPlantEntity):
     """Report whether configured measurements are within their limits."""
 
-    _attr_icon = "mdi:flower"
+    _attr_translation_key = "health"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = HEALTH_STATES
 
     def __init__(
         self,
@@ -327,9 +320,8 @@ class DiyPlantHealthSensor(DiyPlantEntity):
     ) -> None:
         super().__init__(hass, entry)
         self._plantbook_info = plantbook_info or {}
-        self._attr_name = "Health"
         self._attr_unique_id = f"{entry.entry_id}-health"
-        self._attr_icon = "mdi:heart-pulse"
+        self._attr_entity_picture = _plantbook_image(self._plantbook_info)
 
     async def async_added_to_hass(self) -> None:
         """Refresh health when the sun sets or rises."""
@@ -348,22 +340,22 @@ class DiyPlantHealthSensor(DiyPlantEntity):
 
     @property
     def native_value(self) -> str:
-        """Return OK, attention, or unavailable."""
+        """Return ok, attention, sensor_unavailable or no_sensors."""
         statuses = self._statuses()
         if not statuses:
-            return "No sensors"
+            return HEALTH_NO_SENSORS
         if any(status["status"] == "unavailable" for status in statuses.values()):
-            return "Unavailable"
-        return "Attention" if any(status["status"] != "ok" for status in statuses.values()) else "OK"
+            return HEALTH_SENSOR_UNAVAILABLE
+        if any(status["status"] != "ok" for status in statuses.values()):
+            return HEALTH_ATTENTION
+        return HEALTH_OK
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return a compact status report for dashboards and automations."""
         attributes: dict[str, Any] = {"measurements": self._statuses()}
-        image = _plantbook_image(self._plantbook_info)
-        if image:
-            attributes["entity_picture"] = image
-            attributes["plantbook_image"] = image
+        if self._attr_entity_picture:
+            attributes["plantbook_image"] = self._attr_entity_picture
         species = _plantbook_species(self._plantbook_info)
         if species:
             attributes["plantbook_species"] = species

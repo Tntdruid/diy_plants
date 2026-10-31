@@ -126,9 +126,43 @@
           "dli_calibrated_max": "DLI output maksimum"
         }
       }
+    },
+    "error": {
+      "duplicate_sensor": "Den samme sensor kan ikke bruges til flere målinger."
     }
   },
-  "error": {
-    "duplicate_sensor": "Den samme sensor kan ikke bruges til flere målinger."
+  "entity": {
+    "sensor": {
+      "moisture": {
+        "name": "Jordfugtighed"
+      },
+      "conductivity": {
+        "name": "Jordens ledningsevne"
+      },
+      "temperature": {
+        "name": "Jordtemperatur"
+      },
+      "air_temperature": {
+        "name": "Lufttemperatur"
+      },
+      "humidity": {
+        "name": "Luftfugtighed"
+      },
+      "illuminance": {
+        "name": "Lysstyrke"
+      },
+      "dli": {
+        "name": "Dagligt lysintegral"
+      },
+      "health": {
+        "name": "Sundhed",
+        "state": {
+          "ok": "OK",
+          "attention": "Kræver opmærksomhed",
+          "sensor_unavailable": "Sensor utilgængelig",
+          "no_sensors": "Ingen sensorer"
+        }
+      }
+    }
   }
 }

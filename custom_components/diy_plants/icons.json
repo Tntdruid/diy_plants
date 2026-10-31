@@ -1,0 +1,22 @@
+{
+  "entity": {
+    "sensor": {
+      "moisture": { "default": "mdi:water-percent" },
+      "conductivity": { "default": "mdi:sprout" },
+      "temperature": { "default": "mdi:thermometer" },
+      "air_temperature": { "default": "mdi:thermometer-lines" },
+      "humidity": { "default": "mdi:water-percent" },
+      "illuminance": { "default": "mdi:brightness-5" },
+      "dli": { "default": "mdi:weather-sunny" },
+      "health": {
+        "default": "mdi:heart-pulse",
+        "state": {
+          "ok": "mdi:flower",
+          "attention": "mdi:flower-outline",
+          "sensor_unavailable": "mdi:help-circle-outline",
+          "no_sensors": "mdi:sprout-outline"
+        }
+      }
+    }
+  }
+}

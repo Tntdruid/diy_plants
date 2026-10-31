@@ -126,9 +126,43 @@
           "dli_calibrated_max": "DLI output maximum"
         }
       }
+    },
+    "error": {
+      "duplicate_sensor": "The same sensor entity cannot be used for multiple measurements."
     }
   },
-  "error": {
-    "duplicate_sensor": "The same sensor entity cannot be used for multiple measurements."
+  "entity": {
+    "sensor": {
+      "moisture": {
+        "name": "Soil moisture"
+      },
+      "conductivity": {
+        "name": "Soil conductivity"
+      },
+      "temperature": {
+        "name": "Soil temperature"
+      },
+      "air_temperature": {
+        "name": "Air temperature"
+      },
+      "humidity": {
+        "name": "Air humidity"
+      },
+      "illuminance": {
+        "name": "Illuminance"
+      },
+      "dli": {
+        "name": "Daily light integral"
+      },
+      "health": {
+        "name": "Health",
+        "state": {
+          "ok": "OK",
+          "attention": "Needs attention",
+          "sensor_unavailable": "Sensor unavailable",
+          "no_sensors": "No sensors"
+        }
+      }
+    }
   }
 }
