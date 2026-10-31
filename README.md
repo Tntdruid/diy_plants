@@ -44,6 +44,78 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 
 Automations and templates should compare against the state value, for example `is_state('sensor.monstera_health', 'attention')`.
 
+## Dashboard card
+
+The integration ships its own Lovelace card, `custom:diy-plants-card`. It is loaded automatically when DIY Plants is set up, so you do not need to add a dashboard resource. Restart Home Assistant and refresh the browser after installing or updating.
+
+If you previously installed the standalone DIY Plants card through HACS or `/config/www`, remove that dashboard resource; the bundled card replaces it.
+
+### Usage
+
+Use the plant's health sensor as the card entity. Its `measurements` attribute contains the values and limits the card displays:
+
+```yaml
+type: custom:diy-plants-card
+entity: sensor.monstera_health
+fertilizer_sensor: sensor.monstera_fertilizing
+```
+
+The card reads these measurements directly:
+
+- `moisture`
+- `conductivity`
+- `temperature`
+- `air_temperature`
+- `humidity`
+- `illuminance`
+- `dli`
+
+This means Plant Monitor and a `plant.*` entity are not required.
+
+### Options
+
+```yaml
+type: custom:diy-plants-card
+entity: sensor.monstera_health
+name: Monstera
+subtitle: Stueplanter
+image: /local/plants/monstera.jpg
+show_measurements:
+  - moisture
+  - temperature
+  - humidity
+  - illuminance
+  - dli
+display_type: full
+text_size: medium
+hide_units: false
+show_health: true
+bars_per_row: 2
+measurement_entities:
+  temperature: sensor.monstera_soil_temperature
+  air_temperature: sensor.monstera_air_temperature
+moisture_min: 25
+moisture_max: 65
+moisture_min_sensor: sensor.drivhus_plante1_min_fugt
+moisture_max_sensor: sensor.drivhus_plante1_max_fugt
+```
+
+`display_type: compact` defaults to one column and hides units. `bars_per_row` can be `1` or `2` and overrides that default.
+
+`text_size` can be `small`, `medium` or `large` and changes the card's text scale.
+
+`subtitle` is optional and can be different for each plant card. If omitted, the card uses `DIY Plants`.
+
+`moisture_min` and `moisture_max` override the acceptable soil-moisture range for this card. If omitted, the limits from DIY Plants are used.
+
+`fertilizer_sensor` is an optional Home Assistant sensor used as a reminder. Its current state is shown in the card header, for example `Gødning: OK`.
+
+`measurement_entities` optionally maps displayed measurements to their Home Assistant sensor entities. Mapped measurements become clickable and open the standard Home Assistant more-info panel. The integration creates entities such as `temperature` and `air_temperature`; use the exact entity IDs from your installation.
+
+For dynamic limits, set `moisture_min_sensor` and `moisture_max_sensor` to sensor entities. Their current numeric states override the fixed values, for example `sensor.drivhus_plante1_min_fugt` and `sensor.drivhus_plante1_max_fugt`.
+
+`image` is optional. It can be a local URL such as `/local/plants/monstera.jpg`, an external image URL, or it can be omitted when the health entity already exposes an `entity_picture` attribute.
+
 ## Flower Card
 
 Use the Lovelace Flower Card together with Olen's Plant Monitor integration.
@@ -88,6 +160,7 @@ The integration currently uses default limits as starting points. Calibration tr
 
 ### 0.3.0
 
+- The DIY Plants dashboard card is now bundled with the integration and loaded automatically.
 - **Breaking:** the health sensor states are now `ok`, `attention`, `sensor_unavailable` and `no_sensors` (previously `OK`, `Attention`, `Unavailable` and `No sensors`). Update automations that compare against the old values.
 - Measurement and DLI sensors now have device and state classes, so they get long-term statistics, proper graphs and unit conversion. They are no longer hidden as diagnostic entities.
 - Entity names and health states are translated (Danish and English).

@@ -14,7 +14,7 @@ from custom_components.diy_plants.const import (
     DOMAIN,
 )
 
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
+pytestmark = pytest.mark.usefixtures("enable_custom_integrations", "mock_frontend")
 
 
 async def _setup(hass: HomeAssistant) -> MockConfigEntry:

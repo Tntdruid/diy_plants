@@ -1,0 +1,25 @@
+{
+  "name": "diy-plants-card",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Lovelace card for the Home Assistant DIY Plants integration",
+  "module": "diy-plants-card.js",
+  "scripts": {
+    "build": "webpack -c webpack.config.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "custom-card-helpers": "^2.0.0",
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "jsdom": "^26.1.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
+  }
+}

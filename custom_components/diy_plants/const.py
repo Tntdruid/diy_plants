@@ -12,6 +12,9 @@ from homeassistant.const import (
 DOMAIN = "diy_plants"
 PLATFORMS = [Platform.SENSOR]
 
+CARD_FILENAME = "diy-plants-card.js"
+CARD_URL = f"/{DOMAIN}/{CARD_FILENAME}"
+
 CONF_PLANT_NAME = "plant_name"
 CONF_DEVICE_LABEL = "device_label"
 CONF_MOISTURE_SENSOR = "moisture_sensor"
