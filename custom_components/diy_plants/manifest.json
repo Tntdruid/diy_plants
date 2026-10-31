@@ -1,13 +1,14 @@
 {
   "domain": "diy_plants",
   "name": "DIY Plants",
+  "after_dependencies": ["frontend"],
   "codeowners": ["@Tntdruid"],
   "config_flow": true,
-  "dependencies": ["frontend", "http"],
+  "dependencies": ["http"],
   "documentation": "https://github.com/Tntdruid/diy_plants",
   "integration_type": "hub",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/Tntdruid/diy_plants/issues",
   "requirements": [],
-  "version": "0.3.0"
+  "version": "0.3.1"
 }
