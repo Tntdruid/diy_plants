@@ -44,6 +44,25 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 
 Automations and templates should compare against the state value, for example `is_state('sensor.monstera_health', 'attention')`.
 
+## OpenPlantbook
+
+DIY Plants can show the plant's image and species from [OpenPlantbook](https://open.plantbook.io/). It uses the [OpenPlantbook integration](https://github.com/Olen/home-assistant-openplantbook), so your API credentials stay there.
+
+1. Install and configure the OpenPlantbook integration.
+2. In the DIY Plants options, enable **Look up plant in OpenPlantbook**.
+3. Enter either the exact **OpenPlantbook plant ID (pid)**, for example `monstera deliciosa`, or a **plant name to search for**. The pid is used when both are set; a name uses the first search result.
+
+The health sensor's `plantbook_status` attribute shows how the lookup went:
+
+| Status | Meaning |
+|---|---|
+| `found` | The plant was found; `entity_picture`, `plantbook_pid` and `plantbook_species` are set |
+| `waiting_for_openplantbook` | The OpenPlantbook integration is not loaded (yet). The lookup runs as soon as it is |
+| `looking_up` | The lookup is in progress |
+| `not_found` | OpenPlantbook has no plant matching the pid or name |
+| `no_plant_configured` | Lookup is enabled, but neither a pid nor a name is set |
+| `error` | The OpenPlantbook call failed; see the Home Assistant log |
+
 ## Dashboard card
 
 The integration ships its own Lovelace card, `custom:diy-plants-card`. It is loaded automatically when DIY Plants is set up, so you do not need to add a dashboard resource. Restart Home Assistant and refresh the browser after installing or updating.
@@ -160,6 +179,7 @@ The integration currently uses default limits as starting points. Calibration tr
 
 ### 0.3.0
 
+- Fixed the OpenPlantbook lookup: it now waits for OpenPlantbook to load, uses the plant ID field, searches by name, and reports its result in `plantbook_status`.
 - The DIY Plants dashboard card is now bundled with the integration and loaded automatically.
 - **Breaking:** the health sensor states are now `ok`, `attention`, `sensor_unavailable` and `no_sensors` (previously `OK`, `Attention`, `Unavailable` and `No sensors`). Update automations that compare against the old values.
 - Measurement and DLI sensors now have device and state classes, so they get long-term statistics, proper graphs and unit conversion. They are no longer hidden as diagnostic entities.

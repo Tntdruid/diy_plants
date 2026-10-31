@@ -7,7 +7,7 @@
         "data": {
           "plant_name": "Plant name",
           "device_label": "Text below plant name",
-          "plantbook_enabled": "Enable Plantbook integration",
+          "plantbook_enabled": "Look up plant in OpenPlantbook",
           "moisture_sensor": "Soil moisture",
           "conductivity_sensor": "Soil conductivity",
           "temperature_sensor": "Soil temperature",
@@ -55,7 +55,14 @@
           "dli_raw_min": "DLI raw minimum",
           "dli_raw_max": "DLI raw maximum",
           "dli_calibrated_min": "DLI output minimum",
-          "dli_calibrated_max": "DLI output maximum"
+          "dli_calibrated_max": "DLI output maximum",
+          "plantbook_plant_id": "OpenPlantbook plant ID (pid)",
+          "plantbook_plant_name": "Plant name to search for"
+        },
+        "data_description": {
+          "plantbook_enabled": "Requires the OpenPlantbook integration. The plant image and species are added to the health sensor.",
+          "plantbook_plant_id": "Exact pid from OpenPlantbook, for example monstera deliciosa. Used before the name.",
+          "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used."
         }
       }
     },
@@ -118,7 +125,15 @@
           "dli_raw_min": "DLI raw minimum",
           "dli_raw_max": "DLI raw maximum",
           "dli_calibrated_min": "DLI output minimum",
-          "dli_calibrated_max": "DLI output maximum"
+          "dli_calibrated_max": "DLI output maximum",
+          "plantbook_enabled": "Look up plant in OpenPlantbook",
+          "plantbook_plant_id": "OpenPlantbook plant ID (pid)",
+          "plantbook_plant_name": "Plant name to search for"
+        },
+        "data_description": {
+          "plantbook_enabled": "Requires the OpenPlantbook integration. The plant image and species are added to the health sensor.",
+          "plantbook_plant_id": "Exact pid from OpenPlantbook, for example monstera deliciosa. Used before the name.",
+          "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used."
         }
       }
     },

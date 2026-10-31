@@ -7,9 +7,9 @@
         "data": {
           "plant_name": "Plantenavn",
           "device_label": "Tekst under plantenavn",
-          "plantbook_enabled": "Aktivér Plantbook-integration",
-          "plantbook_plant_id": "Plantbook plante-ID",
-          "plantbook_plant_name": "Plantbook plantes navn",
+          "plantbook_enabled": "Slå planten op i OpenPlantbook",
+          "plantbook_plant_id": "OpenPlantbook plante-ID (pid)",
+          "plantbook_plant_name": "Plantenavn der søges efter",
           "moisture_sensor": "Jordfugtighed",
           "conductivity_sensor": "Jordledningsevne",
           "temperature_sensor": "Jordtemperatur",
@@ -58,6 +58,11 @@
           "dli_raw_max": "DLI rå maksimum",
           "dli_calibrated_min": "DLI output minimum",
           "dli_calibrated_max": "DLI output maksimum"
+        },
+        "data_description": {
+          "plantbook_enabled": "Kræver OpenPlantbook-integrationen. Plantens billede og art tilføjes sundhedssensoren.",
+          "plantbook_plant_id": "Præcis pid fra OpenPlantbook, f.eks. monstera deliciosa. Bruges før navnet.",
+          "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges."
         }
       }
     },
@@ -73,9 +78,9 @@
         "description": "Vælg eller ryd sensorer. Sensorer kan vælges uanset enhedsklasse.",
         "data": {
           "device_label": "Tekst under plantenavn",
-          "plantbook_enabled": "Aktivér deling til Plantbook",
-          "plantbook_plant_id": "Plantbook plante-ID",
-          "plantbook_plant_name": "Plantbook plantes navn",
+          "plantbook_enabled": "Slå planten op i OpenPlantbook",
+          "plantbook_plant_id": "OpenPlantbook plante-ID (pid)",
+          "plantbook_plant_name": "Plantenavn der søges efter",
           "moisture_sensor": "Jordfugtighed",
           "conductivity_sensor": "Jordledningsevne",
           "temperature_sensor": "Jordtemperatur",
@@ -124,6 +129,11 @@
           "dli_raw_max": "DLI rå maksimum",
           "dli_calibrated_min": "DLI output minimum",
           "dli_calibrated_max": "DLI output maksimum"
+        },
+        "data_description": {
+          "plantbook_enabled": "Kræver OpenPlantbook-integrationen. Plantens billede og art tilføjes sundhedssensoren.",
+          "plantbook_plant_id": "Præcis pid fra OpenPlantbook, f.eks. monstera deliciosa. Bruges før navnet.",
+          "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges."
         }
       }
     },
