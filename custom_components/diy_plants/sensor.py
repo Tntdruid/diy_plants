@@ -21,16 +21,17 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.components.sensor import RestoreSensor, SensorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_PLANT_NAME, DEFAULT_LUX_TO_PPFD, DOMAIN, METRICS
-from .plantbook import (
-    async_upload_sensor_data,
-    build_sensor_payload,
-    can_share_data,
+from .const import (
+    CONF_DEVICE_LABEL,
+    CONF_PLANT_NAME,
+    DEFAULT_LUX_TO_PPFD,
+    DOMAIN,
+    METRICS,
 )
-
 _LOGGER = logging.getLogger(__name__)
 
 _NUMBER_RE = re.compile(r"[-+]?\d+(?:[,.]\d+)?")
+_SUN_ENTITY = "sun.sun"
 
 
 def _number(value: StateType) -> float | None:
@@ -89,6 +90,12 @@ def _entry_value(entry: ConfigEntry, key: str, default: Any = None) -> Any:
     return entry.options.get(key, entry.data.get(key, default))
 
 
+def _sun_is_below_horizon(hass: HomeAssistant) -> bool:
+    """Return whether Home Assistant reports that the sun has set."""
+    sun_state = hass.states.get(_SUN_ENTITY)
+    return sun_state is not None and sun_state.state == "below_horizon"
+
+
 def _value(
     hass: HomeAssistant,
     entity_id: str | None,
@@ -137,7 +144,7 @@ class DiyPlantEntity(SensorEntity):
         return {
             "identifiers": {(DOMAIN, self.entry.entry_id)},
             "name": self.plant_name,
-            "manufacturer": "DIY Plants",
+            "manufacturer": _entry_value(self.entry, CONF_DEVICE_LABEL, "DIY Plants"),
             "model": "Flexible plant monitor",
         }
 
@@ -312,11 +319,32 @@ class DiyPlantHealthSensor(DiyPlantEntity):
 
     _attr_icon = "mdi:flower"
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        plantbook_info: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(hass, entry)
+        self._plantbook_info = plantbook_info or {}
         self._attr_name = "Health"
         self._attr_unique_id = f"{entry.entry_id}-health"
         self._attr_icon = "mdi:heart-pulse"
+
+    async def async_added_to_hass(self) -> None:
+        """Refresh health when the sun sets or rises."""
+        await super().async_added_to_hass()
+        if self._source_ids["illuminance"]:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, [_SUN_ENTITY], self._sun_changed
+                )
+            )
+
+    @callback
+    def _sun_changed(self, event: Event) -> None:
+        """Refresh the LX status when the sun changes horizon state."""
+        self.async_write_ha_state()
 
     @property
     def native_value(self) -> str:
@@ -331,10 +359,19 @@ class DiyPlantHealthSensor(DiyPlantEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return a compact status report for dashboards and automations."""
-        return {"measurements": self._statuses()}
+        attributes: dict[str, Any] = {"measurements": self._statuses()}
+        image = _plantbook_image(self._plantbook_info)
+        if image:
+            attributes["entity_picture"] = image
+            attributes["plantbook_image"] = image
+        species = _plantbook_species(self._plantbook_info)
+        if species:
+            attributes["plantbook_species"] = species
+        return attributes
 
     def _statuses(self) -> dict[str, dict[str, Any]]:
         result: dict[str, dict[str, Any]] = {}
+        sun_is_below_horizon = _sun_is_below_horizon(self.hass)
         for metric, spec in METRICS.items():
             if not self._source_ids[metric]:
                 continue
@@ -344,13 +381,16 @@ class DiyPlantHealthSensor(DiyPlantEntity):
             minimum, maximum = self._limits(metric)
             if value is None:
                 status = "unavailable"
-            elif value < minimum:
+            elif value < minimum and not (
+                metric == "illuminance" and sun_is_below_horizon
+            ):
                 status = "low"
             elif value > maximum:
                 status = "high"
             else:
                 status = "ok"
             result[metric] = {
+                "entity_id": self._source_ids[metric],
                 "value": value,
                 "raw": raw,
                 "unit": spec["unit"],
@@ -367,7 +407,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up plant sensor entities."""
     illuminance_entity = _entry_value(entry, METRICS["illuminance"]["config"])
-    entities: list[SensorEntity] = [DiyPlantHealthSensor(hass, entry)]
+    plantbook_info = await _fetch_plantbook_info(hass, entry)
+    entities: list[SensorEntity] = [DiyPlantHealthSensor(hass, entry, plantbook_info)]
     entities.extend(
         DiyPlantMetricSensor(hass, entry, metric)
         for metric, spec in METRICS.items()
@@ -377,63 +418,92 @@ async def async_setup_entry(
         entities.append(DiyPlantDliSensor(hass, entry))
     async_add_entities(entities)
 
-    plantbook_enabled = _entry_value(entry, "plantbook_enabled", False)
-    plantbook_api_key = _entry_value(entry, "plantbook_api_key", "")
-    plantbook_id = _entry_value(entry, "plantbook_plant_id", "")
-    if not can_share_data(plantbook_enabled, plantbook_api_key) or not plantbook_id:
-        return
-
-    source_ids = [
-        source
-        for metric, spec in METRICS.items()
-        if metric != "dli" and (source := _entry_value(entry, spec["config"]))
-    ]
-
-    @callback
-    def _source_changed_for_plantbook(_event: Event) -> None:
-        hass.async_create_task(_upload_plantbook_reading(hass, entry))
-
-    if source_ids:
-        hass.async_create_task(_upload_plantbook_reading(hass, entry))
-        entry.async_on_unload(
-            async_track_state_change_event(
-                hass, source_ids, _source_changed_for_plantbook
-            )
-        )
-
-
-async def _upload_plantbook_reading(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Upload the current configured readings when Plantbook sharing is enabled."""
-    measurements: dict[str, dict[str, Any]] = {}
-    for metric, spec in METRICS.items():
-        if metric == "dli":
-            continue
-        source = _entry_value(entry, spec["config"])
-        value, raw, error = _value(hass, source, metric, entry)
-        if value is not None:
-            measurements[metric] = {
-                "value": value,
-                "unit": spec["unit"],
-                "raw": raw,
-            }
-        elif error:
-            _LOGGER.debug("Skipping Plantbook reading for %s: %s", metric, error)
-
-    if not measurements:
-        return
-
-    payload = build_sensor_payload(
-        _entry_value(entry, "plantbook_plant_id"),
-        _entry_value(entry, "plantbook_plant_name", _entry_value(entry, CONF_PLANT_NAME)),
-        measurements,
-        dt_util.utcnow(),
-    )
+async def _fetch_plantbook_info(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> dict[str, Any]:
+    if not _entry_value(entry, "plantbook_enabled", False):
+        return {}
+    plant_name = _entry_value(entry, "plantbook_plant_name", "").strip()
+    if not plant_name or not hass.services.has_service("openplantbook", "get"):
+        return {}
     try:
-        await async_upload_sensor_data(
-            hass,
-            _entry_value(entry, "plantbook_api_key"),
-            payload,
-            enabled=True,
+        response = await hass.services.async_call(
+            "openplantbook",
+            "get",
+            {"species": plant_name.lower(), "include": "care"},
+            blocking=True,
+            return_response=True,
         )
+        return response if isinstance(response, dict) else {}
     except Exception as err:  # noqa: BLE001
-        _LOGGER.warning("Plantbook upload failed: %s", err)
+        _LOGGER.warning("Plantbook plant lookup failed: %s", err)
+        return {}
+
+
+def _nested_string_value(value: Any, keys: tuple[str, ...]) -> str | None:
+    """Recursively find the first string-valued match for any of the given keys."""
+    normalized = {re.sub(r"[^a-z0-9]", "", key.lower()) for key in keys}
+
+    def search(candidate: Any) -> str | None:
+        if isinstance(candidate, dict):
+            for key, nested_value in candidate.items():
+                key_token = re.sub(r"[^a-z0-9]", "", str(key).lower())
+                if key_token in normalized and isinstance(nested_value, str):
+                    text = nested_value.strip()
+                    if text:
+                        return text
+                found = search(nested_value)
+                if found:
+                    return found
+        elif isinstance(candidate, list):
+            for item in candidate:
+                found = search(item)
+                if found:
+                    return found
+        return None
+
+    return search(value)
+
+
+def _plantbook_image(plant: dict[str, Any]) -> str | None:
+    image_keys = (
+        "image",
+        "default_image",
+        "defaultImage",
+        "image_url",
+        "imageUrl",
+        "plant_image",
+        "plantImage",
+        "image_uri",
+        "imageUri",
+        "photo",
+        "photo_url",
+        "thumbnail",
+        "url",
+        "uri",
+        "src",
+    )
+    image = _nested_string_value(plant, image_keys)
+    if image and image.startswith(("http://", "https://", "data:image/")):
+        return image
+    return None
+
+
+def _plantbook_species(plant: dict[str, Any]) -> str | None:
+    species_keys = (
+        "scientific_name",
+        "scientificName",
+        "display_name",
+        "displayName",
+        "species",
+        "latin_name",
+        "latinName",
+        "default_common_name",
+        "defaultCommonName",
+        "default_common_name_or_alias",
+        "defaultCommonNameOrAlias",
+        "common_name",
+        "commonName",
+    )
+    value = _nested_string_value(plant, species_keys)
+    return value.strip() if isinstance(value, str) and value.strip() else None

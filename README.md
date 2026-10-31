@@ -2,6 +2,12 @@
 
 A DIY-friendly plant monitor for Home Assistant. Sensor selection is based on entity ID, not `device_class`, so ESPHome, MQTT, and template sensors can be used even when their metadata is incomplete.
 
+## Install with HACS
+
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Tntdruid&repository=diy_plants&category=integration)
+
+In HACS, open **Integrations**, search for **DIY Plants**, and select **Download**. Restart Home Assistant after the download, then add the integration from **Settings > Devices & services**.
+
 ## Install
 
 1. Copy `custom_components/diy_plants` into the `custom_components` directory of Home Assistant.
@@ -19,6 +25,8 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 - Configurable minimum and maximum limits
 - Immediate updates when source sensors change
 - Health entity with per-measurement status and diagnostics
+- Health entity exposes the Plantbook plant image and species when Plantbook is enabled
+- Plantbook species lookup uses Home Assistant's OpenPlantbook integration; no API key is stored by DIY Plants
 - Raw source values preserved in attributes for troubleshooting
 - Duplicate sensor protection so the same entity cannot be assigned to multiple measurements
 - Danish and English translations for the config flow
@@ -44,6 +52,10 @@ show_bars:
 The `plant.<name>` entity is provided by Plant Monitor, which also supplies the
 Flower Card websocket data and optional OpenPlantbook species information.
 
+The DIY Plants health sensor also exposes `entity_picture` and `plantbook_image`
+after a Plantbook plant lookup. Lovelace cards can use that image without
+requiring a Plantbook API key in DIY Plants.
+
 ## Calibration
 
 Open the integration's options and enable calibration for the measurement you want to adjust. Enter the raw values measured at two known points and the desired output values.
@@ -61,6 +73,7 @@ The integration currently uses default limits as starting points. Calibration tr
 
 ## What’s new
 
+- Suppressed low illuminance warnings after sunset; warnings resume at sunrise
 - Added DLI support as a plant metric
 - Added duplicate sensor protection to avoid assigning the same entity to multiple measurements
 - Added Danish and English translations for the config flow

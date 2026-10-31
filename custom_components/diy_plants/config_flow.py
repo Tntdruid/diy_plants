@@ -9,11 +9,11 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_CONDUCTIVITY_SENSOR,
+    CONF_DEVICE_LABEL,
     CONF_AIR_TEMPERATURE_SENSOR,
     CONF_HUMIDITY_SENSOR,
     CONF_ILLUMINANCE_SENSOR,
     CONF_MOISTURE_SENSOR,
-    CONF_PLANTBOOK_API_KEY,
     CONF_PLANTBOOK_ENABLED,
     CONF_PLANTBOOK_PLANT_ID,
     CONF_PLANTBOOK_PLANT_NAME,
@@ -33,11 +33,12 @@ SENSOR_KEYS = {
 }
 
 
-def _sensor_selector():
-    """Return a selector that accepts any sensor entity."""
+def _sensor_selector(device_class: str | None = None):
+    """Return a selector for sensor entities of an optional device class."""
     return selector.EntitySelector(
         selector.EntitySelectorConfig(
             domain="sensor",
+            device_class=device_class,
             multiple=False,
         )
     )
@@ -63,25 +64,24 @@ def _base_schema(current: dict | None = None) -> dict:
     """Return the standard sensor and limit fields for creation and options."""
     current = current or {}
     schema = {
-        vol.Optional(
-            CONF_MOISTURE_SENSOR, default=current.get(CONF_MOISTURE_SENSOR, "")
-        ): _sensor_selector(),
-        vol.Optional(
-            CONF_CONDUCTIVITY_SENSOR, default=current.get(CONF_CONDUCTIVITY_SENSOR, "")
-        ): _sensor_selector(),
-        vol.Optional(
-            CONF_TEMPERATURE_SENSOR, default=current.get(CONF_TEMPERATURE_SENSOR, "")
-        ): _sensor_selector(),
-        vol.Optional(
-            CONF_AIR_TEMPERATURE_SENSOR,
-            default=current.get(CONF_AIR_TEMPERATURE_SENSOR, ""),
-        ): _sensor_selector(),
-        vol.Optional(
-            CONF_HUMIDITY_SENSOR, default=current.get(CONF_HUMIDITY_SENSOR, "")
-        ): _sensor_selector(),
-        vol.Optional(
-            CONF_ILLUMINANCE_SENSOR, default=current.get(CONF_ILLUMINANCE_SENSOR, "")
-        ): _sensor_selector(),
+        vol.Optional(CONF_MOISTURE_SENSOR, default=current[CONF_MOISTURE_SENSOR])
+        if current.get(CONF_MOISTURE_SENSOR)
+        else vol.Optional(CONF_MOISTURE_SENSOR): _sensor_selector("moisture"),
+        vol.Optional(CONF_CONDUCTIVITY_SENSOR, default=current[CONF_CONDUCTIVITY_SENSOR])
+        if current.get(CONF_CONDUCTIVITY_SENSOR)
+        else vol.Optional(CONF_CONDUCTIVITY_SENSOR): _sensor_selector(),
+        vol.Optional(CONF_TEMPERATURE_SENSOR, default=current[CONF_TEMPERATURE_SENSOR])
+        if current.get(CONF_TEMPERATURE_SENSOR)
+        else vol.Optional(CONF_TEMPERATURE_SENSOR): _sensor_selector("temperature"),
+        vol.Optional(CONF_AIR_TEMPERATURE_SENSOR, default=current[CONF_AIR_TEMPERATURE_SENSOR])
+        if current.get(CONF_AIR_TEMPERATURE_SENSOR)
+        else vol.Optional(CONF_AIR_TEMPERATURE_SENSOR): _sensor_selector("temperature"),
+        vol.Optional(CONF_HUMIDITY_SENSOR, default=current[CONF_HUMIDITY_SENSOR])
+        if current.get(CONF_HUMIDITY_SENSOR)
+        else vol.Optional(CONF_HUMIDITY_SENSOR): _sensor_selector("humidity"),
+        vol.Optional(CONF_ILLUMINANCE_SENSOR, default=current[CONF_ILLUMINANCE_SENSOR])
+        if current.get(CONF_ILLUMINANCE_SENSOR)
+        else vol.Optional(CONF_ILLUMINANCE_SENSOR): _sensor_selector("illuminance"),
     }
     for metric, spec in METRICS.items():
         schema[vol.Optional(f"{metric}_min", default=current.get(f"{metric}_min", spec["minimum"]))] = vol.Coerce(float)
@@ -157,8 +157,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = {
             vol.Required(CONF_PLANT_NAME, default=(user_input or {}).get(CONF_PLANT_NAME, "")): str,
+            vol.Optional(CONF_DEVICE_LABEL, default=(user_input or {}).get(CONF_DEVICE_LABEL, "DIY Plants")): str,
             vol.Optional(CONF_PLANTBOOK_ENABLED, default=(user_input or {}).get(CONF_PLANTBOOK_ENABLED, False)): selector.BooleanSelector(),
-            vol.Optional(CONF_PLANTBOOK_API_KEY, default=(user_input or {}).get(CONF_PLANTBOOK_API_KEY, "")): str,
             vol.Optional(CONF_PLANTBOOK_PLANT_ID, default=(user_input or {}).get(CONF_PLANTBOOK_PLANT_ID, "")): str,
             vol.Optional(CONF_PLANTBOOK_PLANT_NAME, default=(user_input or {}).get(CONF_PLANTBOOK_PLANT_NAME, "")): str,
         }
@@ -191,15 +191,12 @@ class DiyPlantsOptionsFlow(config_entries.OptionsFlow):
                     options[key] = None
                 else:
                     options[key] = value
-            return self.async_update_reload_and_abort(
-                self.config_entry,
-                options=options,
-            )
+            return self.async_create_entry(title="", data=options)
 
         current = {**self.config_entry.data, **self.config_entry.options}
         schema = {
+            vol.Optional(CONF_DEVICE_LABEL, default=current.get(CONF_DEVICE_LABEL, "DIY Plants")): str,
             vol.Optional(CONF_PLANTBOOK_ENABLED, default=current.get(CONF_PLANTBOOK_ENABLED, False)): selector.BooleanSelector(),
-            vol.Optional(CONF_PLANTBOOK_API_KEY, default=current.get(CONF_PLANTBOOK_API_KEY, "")): str,
             vol.Optional(CONF_PLANTBOOK_PLANT_ID, default=current.get(CONF_PLANTBOOK_PLANT_ID, "")): str,
             vol.Optional(CONF_PLANTBOOK_PLANT_NAME, default=current.get(CONF_PLANTBOOK_PLANT_NAME, "")): str,
         }

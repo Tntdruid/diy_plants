@@ -6,8 +6,8 @@
         "description": "Vælg en sensor til hver måling. Sensorer kan vælges uanset enhedsklasse.",
         "data": {
           "plant_name": "Plantenavn",
+          "device_label": "Tekst under plantenavn",
           "plantbook_enabled": "Aktivér Plantbook-integration",
-          "plantbook_api_key": "Plantbook API-nøgle",
           "plantbook_plant_id": "Plantbook plante-ID",
           "plantbook_plant_name": "Plantbook plantes navn",
           "moisture_sensor": "Jordfugtighed",
@@ -72,8 +72,8 @@
         "title": "Plantesensorer",
         "description": "Vælg eller ryd sensorer. Sensorer kan vælges uanset enhedsklasse.",
         "data": {
+          "device_label": "Tekst under plantenavn",
           "plantbook_enabled": "Aktivér deling til Plantbook",
-          "plantbook_api_key": "Plantbook API-nøgle",
           "plantbook_plant_id": "Plantbook plante-ID",
           "plantbook_plant_name": "Plantbook plantes navn",
           "moisture_sensor": "Jordfugtighed",

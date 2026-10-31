@@ -6,6 +6,8 @@
         "description": "Choose any Home Assistant sensor. DIY sensors do not need a device class.",
         "data": {
           "plant_name": "Plant name",
+          "device_label": "Text below plant name",
+          "plantbook_enabled": "Enable Plantbook integration",
           "moisture_sensor": "Soil moisture",
           "conductivity_sensor": "Soil conductivity",
           "temperature_sensor": "Soil temperature",
@@ -68,6 +70,7 @@
         "title": "Plant sensors",
         "description": "Select or clear sensors. Selection is based on entity ID, not device class.",
         "data": {
+          "device_label": "Text below plant name",
           "moisture_sensor": "Soil moisture",
           "conductivity_sensor": "Soil conductivity",
           "temperature_sensor": "Soil temperature",

@@ -6,8 +6,8 @@
         "description": "Choose a sensor for each measurement. Sensors can be selected regardless of device class.",
         "data": {
           "plant_name": "Plant name",
+          "device_label": "Text below plant name",
           "plantbook_enabled": "Enable Plantbook integration",
-          "plantbook_api_key": "Plantbook API key",
           "plantbook_plant_id": "Plantbook plant ID",
           "plantbook_plant_name": "Plantbook plant name",
           "moisture_sensor": "Soil moisture",
@@ -72,8 +72,8 @@
         "title": "Plant sensors",
         "description": "Select or clear sensors. Sensors can be selected regardless of device class.",
         "data": {
+          "device_label": "Text below plant name",
           "plantbook_enabled": "Enable Plantbook sharing",
-          "plantbook_api_key": "Plantbook API key",
           "plantbook_plant_id": "Plantbook plant ID",
           "plantbook_plant_name": "Plantbook plant name",
           "moisture_sensor": "Soil moisture",

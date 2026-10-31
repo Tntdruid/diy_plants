@@ -4,6 +4,7 @@ from custom_components.diy_plants.plantbook import (
     build_sensor_payload,
     can_share_data,
 )
+from custom_components.diy_plants.sensor import _plantbook_image
 
 
 def test_plantbook_sharing_requires_enablement_and_api_key():
@@ -24,3 +25,17 @@ def test_build_sensor_payload_contains_readings_and_timestamp():
         "timestamp": "2026-09-21T18:15:00+00:00",
         "measurements": measurements,
     }
+
+
+def test_plantbook_image_finds_nested_url_from_response_payload():
+    payload = {
+        "data": {
+            "species": "Monstera deliciosa",
+            "images": [
+                {"url": "https://example.com/plant.jpg"},
+                {"thumbnail": "https://example.com/thumb.jpg"},
+            ],
+        }
+    }
+
+    assert _plantbook_image(payload) == "https://example.com/plant.jpg"

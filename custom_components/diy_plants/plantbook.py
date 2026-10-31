@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -16,9 +17,17 @@ _LOGGER = logging.getLogger(__name__)
 PLANTBOOK_BASE_URL = "https://open.plantbook.io/api/v1"
 
 
-def can_share_data(enabled: bool, api_key: str | None) -> bool:
+def can_share_data(
+    enabled: bool,
+    api_key: str | None,
+    client_id: str | None = None,
+    client_secret: str | None = None,
+) -> bool:
     """Return True only when Plantbook sharing is explicitly enabled and configured."""
-    return bool(enabled) and bool(api_key and api_key.strip())
+    return bool(enabled) and bool(
+        (api_key and api_key.strip())
+        or (client_id and client_id.strip() and client_secret and client_secret.strip())
+    )
 
 
 def build_sensor_payload(
@@ -49,12 +58,18 @@ class PlantbookClient:
         api_key: str,
         *,
         enabled: bool = True,
+        client_id: str | None = None,
+        client_secret: str | None = None,
         base_url: str = PLANTBOOK_BASE_URL,
     ) -> None:
         self.hass = hass
         self.api_key = api_key
         self.enabled = enabled
+        self.client_id = client_id
+        self.client_secret = client_secret
         self.base_url = base_url.rstrip("/")
+        self._access_token: str | None = None
+        self._access_token_expires_at = 0.0
 
     async def _request(
         self,
@@ -63,18 +78,42 @@ class PlantbookClient:
         *,
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
     ) -> Any:
         """Perform a request to the Plantbook API."""
-        if not can_share_data(self.enabled, self.api_key):
+        if not can_share_data(self.enabled, self.api_key, self.client_id, self.client_secret):
             raise PlantbookError("Plantbook sharing is disabled or no API key is configured.")
 
         from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
         session = async_get_clientsession(self.hass)
-        headers = {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-        }
+        headers = {"Accept": "application/json"}
+        if self.client_id and self.client_secret:
+            if not self._access_token or time.monotonic() >= self._access_token_expires_at:
+                async with session.post(
+                    f"{self.base_url}/token/",
+                    headers={"Accept": "application/json"},
+                    data={
+                        "grant_type": "client_credentials",
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "scope": "read write",
+                    },
+                ) as token_response:
+                    token_payload = await token_response.json(content_type=None)
+                    if token_response.status < 200 or token_response.status >= 300:
+                        detail = token_payload.get("detail") if isinstance(token_payload, dict) else token_payload
+                        raise PlantbookError(
+                            f"Plantbook token request failed {token_response.status}: {detail or token_response.reason}"
+                        )
+                    self._access_token = token_payload.get("access_token")
+                    if not self._access_token:
+                        raise PlantbookError("Plantbook token response did not contain an access token.")
+                    expires_in = float(token_payload.get("expires_in", 3600))
+                    self._access_token_expires_at = time.monotonic() + max(0, expires_in - 30)
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        else:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         if json is not None:
             headers["Content-Type"] = "application/json"
 
@@ -85,13 +124,15 @@ class PlantbookClient:
                 headers=headers,
                 params=params,
                 json=json,
+                data=data,
             ) as response:
                 payload = await response.json(content_type=None)
                 if 200 <= response.status < 300:
                     return payload
                 detail = payload.get("detail") if isinstance(payload, dict) else payload
                 raise PlantbookError(
-                    f"Plantbook API error {response.status}: {detail or response.reason}"
+                    f"Plantbook API error {response.status} for {method} {path}: "
+                    f"{detail or response.reason}"
                 )
         except ClientError as err:
             raise PlantbookError(f"Request to Plantbook failed: {err}") from err
@@ -129,11 +170,13 @@ async def async_search_plant(
     query: str,
     *,
     enabled: bool = True,
+    client_id: str | None = None,
+    client_secret: str | None = None,
 ) -> list[dict[str, Any]]:
     """Quick lookup helper for a plant search."""
-    if not can_share_data(enabled, api_key):
+    if not can_share_data(enabled, api_key, client_id, client_secret):
         return []
-    client = PlantbookClient(hass, api_key, enabled=enabled)
+    client = PlantbookClient(hass, api_key, enabled=enabled, client_id=client_id, client_secret=client_secret)
     return await client.search_plants(query)
 
 
@@ -143,11 +186,13 @@ async def async_get_plant(
     plant_id: str | int,
     *,
     enabled: bool = True,
+    client_id: str | None = None,
+    client_secret: str | None = None,
 ) -> dict[str, Any]:
     """Quick fetch helper for a specific plant by id."""
-    if not can_share_data(enabled, api_key):
+    if not can_share_data(enabled, api_key, client_id, client_secret):
         return {}
-    client = PlantbookClient(hass, api_key, enabled=enabled)
+    client = PlantbookClient(hass, api_key, enabled=enabled, client_id=client_id, client_secret=client_secret)
     return await client.get_plant(plant_id)
 
 
@@ -159,11 +204,13 @@ async def async_link_plant(
     source_entity: str,
     *,
     enabled: bool = True,
+    client_id: str | None = None,
+    client_secret: str | None = None,
 ) -> dict[str, Any]:
     """Build a minimal link payload for a Plantbook plant record."""
-    if not can_share_data(enabled, api_key):
+    if not can_share_data(enabled, api_key, client_id, client_secret):
         return {}
-    client = PlantbookClient(hass, api_key, enabled=enabled)
+    client = PlantbookClient(hass, api_key, enabled=enabled, client_id=client_id, client_secret=client_secret)
     payload = {
         "plant_id": plant_id,
         "plant_name": plant_name,
@@ -178,9 +225,11 @@ async def async_upload_sensor_data(
     payload: dict[str, Any],
     *,
     enabled: bool = True,
+    client_id: str | None = None,
+    client_secret: str | None = None,
 ) -> dict[str, Any]:
     """Upload sensor time series data to Plantbook."""
-    if not can_share_data(enabled, api_key):
+    if not can_share_data(enabled, api_key, client_id, client_secret):
         return {}
-    client = PlantbookClient(hass, api_key, enabled=enabled)
+    client = PlantbookClient(hass, api_key, enabled=enabled, client_id=client_id, client_secret=client_secret)
     return await client.upload_sensor_data(payload)
