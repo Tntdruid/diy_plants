@@ -57,12 +57,14 @@
           "dli_calibrated_min": "DLI output minimum",
           "dli_calibrated_max": "DLI output maximum",
           "plantbook_plant_id": "OpenPlantbook plant ID (pid)",
-          "plantbook_plant_name": "Plant name to search for"
+          "plantbook_plant_name": "Plant name to search for",
+          "plantbook_limits": "Use limits from OpenPlantbook"
         },
         "data_description": {
           "plantbook_enabled": "Requires the OpenPlantbook integration. The plant image and species are added to the health sensor.",
           "plantbook_plant_id": "Exact pid from OpenPlantbook, for example monstera deliciosa. Used before the name.",
-          "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used."
+          "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used.",
+          "plantbook_limits": "Plantbook's recommended ranges replace the limits below for the measurements Plantbook has values for."
         }
       }
     },
@@ -128,12 +130,14 @@
           "dli_calibrated_max": "DLI output maximum",
           "plantbook_enabled": "Look up plant in OpenPlantbook",
           "plantbook_plant_id": "OpenPlantbook plant ID (pid)",
-          "plantbook_plant_name": "Plant name to search for"
+          "plantbook_plant_name": "Plant name to search for",
+          "plantbook_limits": "Use limits from OpenPlantbook"
         },
         "data_description": {
           "plantbook_enabled": "Requires the OpenPlantbook integration. The plant image and species are added to the health sensor.",
           "plantbook_plant_id": "Exact pid from OpenPlantbook, for example monstera deliciosa. Used before the name.",
-          "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used."
+          "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used.",
+          "plantbook_limits": "Plantbook's recommended ranges replace the limits below for the measurements Plantbook has values for."
         }
       }
     },

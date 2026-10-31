@@ -15,6 +15,7 @@ from .const import (
     CONF_ILLUMINANCE_SENSOR,
     CONF_MOISTURE_SENSOR,
     CONF_PLANTBOOK_ENABLED,
+    CONF_PLANTBOOK_LIMITS,
     CONF_PLANTBOOK_PLANT_ID,
     CONF_PLANTBOOK_PLANT_NAME,
     CONF_PLANT_NAME,
@@ -161,6 +162,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_PLANTBOOK_ENABLED, default=(user_input or {}).get(CONF_PLANTBOOK_ENABLED, False)): selector.BooleanSelector(),
             vol.Optional(CONF_PLANTBOOK_PLANT_ID, default=(user_input or {}).get(CONF_PLANTBOOK_PLANT_ID, "")): str,
             vol.Optional(CONF_PLANTBOOK_PLANT_NAME, default=(user_input or {}).get(CONF_PLANTBOOK_PLANT_NAME, "")): str,
+            vol.Optional(CONF_PLANTBOOK_LIMITS, default=(user_input or {}).get(CONF_PLANTBOOK_LIMITS, True)): selector.BooleanSelector(),
         }
         schema.update(_base_schema(user_input or {}))
         schema.update(_calibration_schema(user_input or {}))
@@ -199,6 +201,7 @@ class DiyPlantsOptionsFlow(config_entries.OptionsFlow):
             vol.Optional(CONF_PLANTBOOK_ENABLED, default=current.get(CONF_PLANTBOOK_ENABLED, False)): selector.BooleanSelector(),
             vol.Optional(CONF_PLANTBOOK_PLANT_ID, default=current.get(CONF_PLANTBOOK_PLANT_ID, "")): str,
             vol.Optional(CONF_PLANTBOOK_PLANT_NAME, default=current.get(CONF_PLANTBOOK_PLANT_NAME, "")): str,
+            vol.Optional(CONF_PLANTBOOK_LIMITS, default=current.get(CONF_PLANTBOOK_LIMITS, True)): selector.BooleanSelector(),
         }
         schema.update(_base_schema(current))
         schema.update(_calibration_schema(current))

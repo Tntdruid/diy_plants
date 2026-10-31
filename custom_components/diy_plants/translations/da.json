@@ -57,12 +57,14 @@
           "dli_raw_min": "DLI rå minimum",
           "dli_raw_max": "DLI rå maksimum",
           "dli_calibrated_min": "DLI output minimum",
-          "dli_calibrated_max": "DLI output maksimum"
+          "dli_calibrated_max": "DLI output maksimum",
+          "plantbook_limits": "Brug grænser fra OpenPlantbook"
         },
         "data_description": {
           "plantbook_enabled": "Kræver OpenPlantbook-integrationen. Plantens billede og art tilføjes sundhedssensoren.",
           "plantbook_plant_id": "Præcis pid fra OpenPlantbook, f.eks. monstera deliciosa. Bruges før navnet.",
-          "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges."
+          "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges.",
+          "plantbook_limits": "Plantbooks anbefalede intervaller erstatter grænserne nedenfor for de målinger, Plantbook har værdier for."
         }
       }
     },
@@ -128,12 +130,14 @@
           "dli_raw_min": "DLI rå minimum",
           "dli_raw_max": "DLI rå maksimum",
           "dli_calibrated_min": "DLI output minimum",
-          "dli_calibrated_max": "DLI output maksimum"
+          "dli_calibrated_max": "DLI output maksimum",
+          "plantbook_limits": "Brug grænser fra OpenPlantbook"
         },
         "data_description": {
           "plantbook_enabled": "Kræver OpenPlantbook-integrationen. Plantens billede og art tilføjes sundhedssensoren.",
           "plantbook_plant_id": "Præcis pid fra OpenPlantbook, f.eks. monstera deliciosa. Bruges før navnet.",
-          "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges."
+          "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges.",
+          "plantbook_limits": "Plantbooks anbefalede intervaller erstatter grænserne nedenfor for de målinger, Plantbook har værdier for."
         }
       }
     },

@@ -2,7 +2,9 @@
 
 import hashlib
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
@@ -17,6 +19,13 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _CARD_PATH = Path(__file__).parent / "frontend" / CARD_FILENAME
+
+
+@dataclass
+class DiyPlantData:
+    """State shared between one plant's entities."""
+
+    plantbook: dict[str, Any] = field(default_factory=dict)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -72,6 +81,7 @@ def _card_digest() -> str:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up a plant from a config entry."""
+    entry.runtime_data = DiyPlantData()
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

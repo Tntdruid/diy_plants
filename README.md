@@ -27,6 +27,7 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 - Measurement sensors with device and state classes, so Home Assistant keeps long-term statistics and shows them on dashboards
 - Health entity with per-measurement status and diagnostics
 - Health entity exposes the Plantbook plant image and species when Plantbook is enabled
+- Plant limits from OpenPlantbook, with your own limits as fallback
 - Plantbook species lookup uses Home Assistant's OpenPlantbook integration; no API key is stored by DIY Plants
 - Raw source values preserved in attributes for troubleshooting
 - Duplicate sensor protection so the same entity cannot be assigned to multiple measurements
@@ -51,6 +52,23 @@ DIY Plants can show the plant's image and species from [OpenPlantbook](https://o
 1. Install and configure the OpenPlantbook integration.
 2. In the DIY Plants options, enable **Look up plant in OpenPlantbook**.
 3. Enter either the exact **OpenPlantbook plant ID (pid)**, for example `monstera deliciosa`, or a **plant name to search for**. The pid is used when both are set; a name uses the first search result.
+
+### Limits from OpenPlantbook
+
+With **Use limits from OpenPlantbook** enabled (the default), Plantbook's recommended ranges replace the configured limits for every measurement Plantbook has values for:
+
+| Measurement | Plantbook values |
+|---|---|
+| Soil moisture | `min_soil_moist`, `max_soil_moist` |
+| Soil conductivity | `min_soil_ec`, `max_soil_ec` |
+| Soil and air temperature | `min_temp`, `max_temp` |
+| Air humidity | `min_env_humid`, `max_env_humid` |
+| Illuminance | `min_light_lux`, `max_light_lux` |
+| DLI | `min_dli`, `max_dli` |
+
+Measurements without Plantbook values keep the configured limits. Each measurement's `limit_source` attribute is `plantbook` or `configured`, so you can see which one is used. Turn the option off to always use your own limits.
+
+### Lookup status
 
 The health sensor's `plantbook_status` attribute shows how the lookup went:
 
@@ -185,6 +203,10 @@ The mapping is linear and is clamped to the configured output range. The raw val
 The integration currently uses default limits as starting points. Calibration transforms, smoothing, hysteresis, and irrigation actions are planned next.
 
 ## What’s new
+
+### 0.4.0
+
+- Plant limits can come from OpenPlantbook. Enabled by default when the Plantbook lookup is on; each measurement shows its `limit_source`.
 
 ### 0.3.0
 

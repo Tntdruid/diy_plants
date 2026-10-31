@@ -7,6 +7,7 @@ from custom_components.diy_plants.const import (
     CONF_MOISTURE_SENSOR,
     CONF_PLANT_NAME,
     CONF_PLANTBOOK_ENABLED,
+    CONF_PLANTBOOK_LIMITS,
     CONF_PLANTBOOK_PLANT_ID,
     CONF_PLANTBOOK_PLANT_NAME,
     DOMAIN,
@@ -19,6 +20,8 @@ PLANTS = {
         "pid": "monstera deliciosa",
         "display_pid": "Monstera deliciosa",
         "image_url": "https://example.com/monstera.jpg",
+        "min_soil_moist": 15,
+        "max_soil_moist": "60",
     },
     "ficus lyrata": {
         "pid": "ficus lyrata",
@@ -107,3 +110,40 @@ async def test_unknown_plant_reports_not_found(hass: HomeAssistant) -> None:
     health = hass.states.get(health_id)
     assert health.attributes["plantbook_status"] == "not_found"
     assert "entity_picture" not in health.attributes
+
+
+async def test_plantbook_limits_replace_configured_limits(hass: HomeAssistant) -> None:
+    _register_openplantbook(hass)
+    health_id = await _setup(hass, **{CONF_PLANTBOOK_PLANT_ID: "monstera deliciosa"})
+
+    moisture = hass.states.get(health_id).attributes["measurements"]["moisture"]
+    assert (moisture["minimum"], moisture["maximum"]) == (15, 60)
+    assert moisture["limit_source"] == "plantbook"
+
+    entry_id = er.async_get(hass).async_get(health_id).config_entry_id
+    sensor_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{entry_id}-moisture"
+    )
+    sensor = hass.states.get(sensor_id)
+    assert (sensor.attributes["minimum"], sensor.attributes["maximum"]) == (15, 60)
+    assert sensor.attributes["limit_source"] == "plantbook"
+
+
+async def test_plantbook_limits_can_be_turned_off(hass: HomeAssistant) -> None:
+    _register_openplantbook(hass)
+    health_id = await _setup(
+        hass,
+        **{CONF_PLANTBOOK_PLANT_ID: "monstera deliciosa", CONF_PLANTBOOK_LIMITS: False},
+    )
+    moisture = hass.states.get(health_id).attributes["measurements"]["moisture"]
+    assert (moisture["minimum"], moisture["maximum"]) == (20, 70)
+    assert moisture["limit_source"] == "configured"
+
+
+async def test_metrics_without_plantbook_values_keep_configured_limits(
+    hass: HomeAssistant,
+) -> None:
+    _register_openplantbook(hass)
+    health_id = await _setup(hass, **{CONF_PLANTBOOK_PLANT_ID: "ficus lyrata"})
+    moisture = hass.states.get(health_id).attributes["measurements"]["moisture"]
+    assert moisture["limit_source"] == "configured"
