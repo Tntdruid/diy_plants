@@ -87,3 +87,32 @@ async def test_yaml_dashboards_are_left_alone(
     hass: HomeAssistant, enable_custom_integrations: None, mock_frontend: Mock
 ) -> None:
     assert await _setup_with_resources(hass, [], mode="yaml") == []
+
+
+async def test_card_url_contains_integration_version(
+    hass: HomeAssistant, enable_custom_integrations: None, mock_frontend: Mock
+) -> None:
+    from homeassistant.loader import async_get_integration
+
+    version = (await async_get_integration(hass, DOMAIN)).version
+    (item,) = await _setup_with_resources(hass, [])
+    assert item["url"].startswith(f"{CARD_URL}?v={version}-")
+
+
+def test_stale_gzip_copy_is_removed(tmp_path, monkeypatch) -> None:
+    import gzip
+
+    import custom_components.diy_plants as diy_plants
+
+    card = tmp_path / "diy-plants-card.js"
+    card.write_text("new card")
+    stale = tmp_path / "diy-plants-card.js.gz"
+    stale.write_bytes(gzip.compress(b"old card"))
+    monkeypatch.setattr(diy_plants, "_CARD_PATH", card)
+
+    diy_plants._prepare_card()
+    assert not stale.exists()
+
+    stale.write_bytes(gzip.compress(b"new card"))
+    diy_plants._prepare_card()
+    assert stale.exists()

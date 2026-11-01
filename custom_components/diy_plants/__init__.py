@@ -1,5 +1,6 @@
 """DIY-friendly plant monitoring for Home Assistant."""
 
+import gzip
 import hashlib
 import logging
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from .const import CARD_FILENAME, CARD_URL, DOMAIN, PLATFORMS
 
@@ -33,7 +35,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(CARD_URL, str(_CARD_PATH), cache_headers=False)]
     )
-    versioned_url = f"{CARD_URL}?v={await hass.async_add_executor_job(_card_digest)}"
+    # The integration version is part of the URL so every update gets a URL no
+    # browser or service worker has cached, even if an old copy was broken.
+    version = (await async_get_integration(hass, DOMAIN)).version
+    digest = await hass.async_add_executor_job(_prepare_card)
+    versioned_url = f"{CARD_URL}?v={version}-{digest}"
     # frontend is an after_dependency: always there in a normal install, absent in tests.
     if "frontend" in hass.config.components:
         from homeassistant.components.frontend import add_extra_js_url
@@ -74,9 +80,23 @@ async def _async_ensure_card_resource(hass: HomeAssistant, url: str) -> None:
     _LOGGER.info("Added dashboard resource %s", url)
 
 
-def _card_digest() -> str:
-    """Return a short content hash so browsers reload an updated card."""
-    return hashlib.sha256(_CARD_PATH.read_bytes()).hexdigest()[:8]
+def _prepare_card() -> str:
+    """Return a short content hash of the card and drop a stale gzip copy.
+
+    The web server prefers a .gz file next to the card when the browser accepts
+    gzip, so a .gz left over from an older version would serve old code.
+    """
+    content = _CARD_PATH.read_bytes()
+    gz_path = _CARD_PATH.with_name(_CARD_PATH.name + ".gz")
+    if gz_path.exists():
+        try:
+            stale = gzip.decompress(gz_path.read_bytes()) != content
+        except (OSError, EOFError):
+            stale = True
+        if stale:
+            gz_path.unlink()
+            _LOGGER.info("Removed stale %s", gz_path.name)
+    return hashlib.sha256(content).hexdigest()[:8]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -204,6 +204,11 @@ The integration currently uses default limits as starting points. Calibration tr
 
 ## What’s new
 
+### 0.4.1
+
+- The card URL now includes the integration version, so browsers never reuse a cached copy from an older install. Fixes "Custom element doesn't exist: diy-plants-card" after an update.
+- A stale gzip copy of the card is removed at startup.
+
 ### 0.4.0
 
 - Plant limits can come from OpenPlantbook. Enabled by default when the Plantbook lookup is on; each measurement shows its `limit_source`.
