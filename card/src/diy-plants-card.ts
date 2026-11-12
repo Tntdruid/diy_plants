@@ -231,7 +231,7 @@ export class DiyPlantsCard extends LitElement {
     const subtitle = this.config.subtitle ?? text.subtitle;
     const image = this.config.image ?? (typeof state.attributes.entity_picture === 'string' ? state.attributes.entity_picture : undefined);
     const showHealth = this.config.show_health ?? true;
-    const healthStatus = state.state.toLowerCase().includes('ok') ? 'good' : state.state.toLowerCase().includes('unavailable') ? 'unavailable' : 'bad';
+    const healthStatus = state.state.toLowerCase().includes('ok') ? 'good' : /unavailable|stale/.test(state.state.toLowerCase()) ? 'unavailable' : 'bad';
     const fertilizer = this.config.fertilizer_sensor ? this.hass.states[this.config.fertilizer_sensor] : undefined;
     const fertilizerStatus = fertilizer
       ? fertilizer.state.toLowerCase().includes('ok') ? 'good' : fertilizer.state.toLowerCase().includes('unavailable') ? 'unavailable' : 'bad'

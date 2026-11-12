@@ -35,6 +35,7 @@ const translations = {
     statusAttention: 'Attention',
     statusUnavailable: 'Unavailable',
     statusNoSensors: 'No sensors',
+    statusStale: 'Sensor not updating',
     metrics: METRIC_LABELS,
   },
   da: {
@@ -68,6 +69,7 @@ const translations = {
     statusAttention: 'Bemærk',
     statusUnavailable: 'Ikke tilgængelig',
     statusNoSensors: 'Ingen sensorer',
+    statusStale: 'Sensor opdaterer ikke',
     metrics: {
       moisture: 'Jordfugtighed',
       conductivity: 'Jordens ledningsevne',
@@ -100,6 +102,7 @@ export function translatedStatus(state: string, language: CardLanguage): string 
   const normalized = state.toLowerCase();
   const translation = getTranslations(language);
   if (normalized.includes('unavailable')) return translation.statusUnavailable;
+  if (normalized.includes('stale')) return translation.statusStale;
   if (normalized === 'no_sensors' || normalized === 'no sensors') return translation.statusNoSensors;
   if (normalized.includes('attention')) return translation.statusAttention;
   if (normalized.includes('ok')) return translation.statusOk;

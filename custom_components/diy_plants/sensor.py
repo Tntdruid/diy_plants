@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import re
 import logging
 from collections.abc import Mapping
@@ -15,17 +14,12 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import (
-    async_dispatcher_connect,
-    async_dispatcher_send,
-)
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
 )
-from homeassistant.helpers.typing import StateType
 from homeassistant.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
@@ -34,28 +28,41 @@ from homeassistant.components.sensor import (
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_DEVICE_LABEL,
-    CONF_PLANT_NAME,
     CONF_PLANTBOOK_ENABLED,
-    CONF_PLANTBOOK_LIMITS,
     CONF_PLANTBOOK_PLANT_ID,
     CONF_PLANTBOOK_PLANT_NAME,
     DEFAULT_LUX_TO_PPFD,
-    DOMAIN,
     METRICS,
     SIGNAL_PLANTBOOK_UPDATED,
 )
+from .entity import DiyPlantBase
+from .status import (
+    STATUS_OK,
+    STATUS_STALE,
+    STATUS_UNAVAILABLE,
+    _entry_value,
+    _number,
+    _value,
+    evaluate,
+    limits,
+)
+
 _LOGGER = logging.getLogger(__name__)
 
-_NUMBER_RE = re.compile(r"[-+]?\d+(?:[,.]\d+)?")
-_SUN_ENTITY = "sun.sun"
 _OPENPLANTBOOK = "openplantbook"
 
 HEALTH_OK = "ok"
 HEALTH_ATTENTION = "attention"
 HEALTH_SENSOR_UNAVAILABLE = "sensor_unavailable"
+HEALTH_SENSOR_STALE = "sensor_stale"
 HEALTH_NO_SENSORS = "no_sensors"
-HEALTH_STATES = [HEALTH_OK, HEALTH_ATTENTION, HEALTH_SENSOR_UNAVAILABLE, HEALTH_NO_SENSORS]
+HEALTH_STATES = [
+    HEALTH_OK,
+    HEALTH_ATTENTION,
+    HEALTH_SENSOR_UNAVAILABLE,
+    HEALTH_SENSOR_STALE,
+    HEALTH_NO_SENSORS,
+]
 
 PLANTBOOK_NO_PLANT = "no_plant_configured"
 PLANTBOOK_WAITING = "waiting_for_openplantbook"
@@ -65,133 +72,8 @@ PLANTBOOK_NOT_FOUND = "not_found"
 PLANTBOOK_ERROR = "error"
 
 
-def _number(value: StateType) -> float | None:
-    """Parse a numeric state, including values with a decimal comma."""
-    if value in (None, STATE_UNKNOWN, STATE_UNAVAILABLE):
-        return None
-    match = _NUMBER_RE.search(str(value))
-    if not match:
-        return None
-    try:
-        parsed = float(match.group().replace(",", "."))
-    except ValueError:
-        return None
-    return parsed if math.isfinite(parsed) else None
-
-
-def _conductivity(value: float, unit: str | None) -> float:
-    """Return conductivity in the Home Assistant canonical unit, µS/cm."""
-    normalized_unit = (unit or "").replace("μ", "µ").lower().replace(" ", "")
-    if "ms/cm" in normalized_unit or "mscm" in normalized_unit:
-        return value * 1000
-    return value
-
-
-def _calibrate(value: float, entry: ConfigEntry, metric: str) -> float:
-    """Map a normalized source value to the user's calibrated range."""
-    if not _entry_value(entry, f"{metric}_calibration_enabled", False):
-        return value
-    raw_min = float(_entry_value(entry, f"{metric}_raw_min", 0))
-    raw_max = float(_entry_value(entry, f"{metric}_raw_max", 100))
-    calibrated_min = float(_entry_value(entry, f"{metric}_calibrated_min", 0))
-    calibrated_max = float(_entry_value(entry, f"{metric}_calibrated_max", 100))
-    if raw_min == raw_max:
-        return value
-    ratio = (value - raw_min) / (raw_max - raw_min)
-    calibrated = calibrated_min + ratio * (calibrated_max - calibrated_min)
-    low, high = sorted((calibrated_min, calibrated_max))
-    return max(low, min(high, calibrated))
-
-
-def _entry_value(entry: ConfigEntry, key: str, default: Any = None) -> Any:
-    """Return a config value, preferring options over original entry data."""
-    return entry.options.get(key, entry.data.get(key, default))
-
-
-def _sun_is_below_horizon(hass: HomeAssistant) -> bool:
-    """Return whether Home Assistant reports that the sun has set."""
-    sun_state = hass.states.get(_SUN_ENTITY)
-    return sun_state is not None and sun_state.state == "below_horizon"
-
-
-def _value(
-    hass: HomeAssistant,
-    entity_id: str | None,
-    metric: str,
-    entry: ConfigEntry,
-) -> tuple[float | None, str | None, str | None]:
-    """Read and normalize one source entity."""
-    if not entity_id:
-        return None, None, "No source sensor configured"
-    state = hass.states.get(entity_id)
-    if state is None:
-        return None, None, "Source sensor does not exist"
-    raw = _number(state.state)
-    if raw is None:
-        return None, state.state, f"Source state is {state.state}"
-    if metric == "conductivity":
-        raw = _conductivity(raw, state.attributes.get("unit_of_measurement"))
-    return _calibrate(raw, entry, metric), state.state, None
-
-
-class DiyPlantEntity(SensorEntity):
-    """Common entity behavior for one plant."""
-
-    _attr_has_entity_name = True
-
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        self.hass = hass
-        self.entry = entry
-        self.plant_name = _entry_value(entry, CONF_PLANT_NAME)
-        self._source_ids = {
-            metric: _entry_value(entry, spec["config"])
-            for metric, spec in METRICS.items()
-        }
-
-    def _limits(self, metric: str) -> tuple[float, float, str]:
-        """Return the limits and where they come from.
-
-        Plantbook values win over the configured limits when enabled, because
-        the config flow always stores limits, even when they are untouched defaults.
-        """
-        spec = METRICS[metric]
-        minimum = float(_entry_value(self.entry, f"{metric}_min", spec["minimum"]))
-        maximum = float(_entry_value(self.entry, f"{metric}_max", spec["maximum"]))
-        source = "configured"
-        if _entry_value(self.entry, CONF_PLANTBOOK_LIMITS, True):
-            plantbook = _plantbook_data(self.entry)
-            low_key, high_key = spec["plantbook"]
-            if (low := _number(plantbook.get(low_key))) is not None:
-                minimum, source = low, "plantbook"
-            if (high := _number(plantbook.get(high_key))) is not None:
-                maximum, source = high, "plantbook"
-        return minimum, maximum, source
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Group all entities belonging to this plant."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.entry.entry_id)},
-            name=self.plant_name,
-            manufacturer=_entry_value(self.entry, CONF_DEVICE_LABEL, "DIY Plants"),
-            model="Flexible plant monitor",
-        )
-
-    async def async_added_to_hass(self) -> None:
-        """Listen for source changes instead of waiting for a poll."""
-        await super().async_added_to_hass()
-        source_ids = [source for source in self._source_ids.values() if source]
-        if source_ids:
-            self.async_on_remove(
-                async_track_state_change_event(
-                    self.hass, source_ids, self._source_changed
-                )
-            )
-
-    @callback
-    def _source_changed(self, event: Event) -> None:
-        """Refresh when a DIY source publishes a new value."""
-        self.async_write_ha_state()
+class DiyPlantEntity(DiyPlantBase, SensorEntity):
+    """Common sensor behavior for one plant."""
 
 
 class DiyPlantMetricSensor(DiyPlantEntity):
@@ -208,17 +90,6 @@ class DiyPlantMetricSensor(DiyPlantEntity):
         self._attr_state_class = spec["state_class"]
         self._attr_suggested_display_precision = spec["precision"]
 
-    async def async_added_to_hass(self) -> None:
-        """Also refresh the limits once Plantbook data arrives."""
-        await super().async_added_to_hass()
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass,
-                SIGNAL_PLANTBOOK_UPDATED.format(self.entry.entry_id),
-                self.async_write_ha_state,
-            )
-        )
-
     @property
     def native_value(self) -> float | None:
         """Return the normalized value."""
@@ -232,7 +103,7 @@ class DiyPlantMetricSensor(DiyPlantEntity):
         """Expose source and parsing information for troubleshooting."""
         source = self._source_ids[self.metric]
         value, raw, error = _value(self.hass, source, self.metric, self.entry)
-        minimum, maximum, limit_source = self._limits(self.metric)
+        minimum, maximum, limit_source = limits(self.entry, self.metric)
         return {
             "source_entity": source,
             "raw_state": raw,
@@ -356,6 +227,7 @@ class DiyPlantHealthSensor(DiyPlantEntity):
     _attr_translation_key = "health"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = HEALTH_STATES
+    _tracks_status = True
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(hass, entry)
@@ -364,14 +236,8 @@ class DiyPlantHealthSensor(DiyPlantEntity):
         self._attr_unique_id = f"{entry.entry_id}-health"
 
     async def async_added_to_hass(self) -> None:
-        """Refresh health when the sun sets or rises and look up Plantbook data."""
+        """Look up Plantbook data once OpenPlantbook is available."""
         await super().async_added_to_hass()
-        if self._source_ids["illuminance"]:
-            self.async_on_remove(
-                async_track_state_change_event(
-                    self.hass, [_SUN_ENTITY], self._sun_changed
-                )
-            )
         if not _entry_value(self.entry, CONF_PLANTBOOK_ENABLED, False):
             return
         if not _plantbook_query(self.entry):
@@ -420,27 +286,24 @@ class DiyPlantHealthSensor(DiyPlantEntity):
             self.hass, SIGNAL_PLANTBOOK_UPDATED.format(self.entry.entry_id)
         )
 
-    @callback
-    def _sun_changed(self, event: Event) -> None:
-        """Refresh the LX status when the sun changes horizon state."""
-        self.async_write_ha_state()
-
     @property
     def native_value(self) -> str:
-        """Return ok, attention, sensor_unavailable or no_sensors."""
-        statuses = self._statuses()
+        """Return the most important problem, or ok."""
+        statuses = {info["status"] for info in evaluate(self.hass, self.entry).values()}
         if not statuses:
             return HEALTH_NO_SENSORS
-        if any(status["status"] == "unavailable" for status in statuses.values()):
+        if STATUS_UNAVAILABLE in statuses:
             return HEALTH_SENSOR_UNAVAILABLE
-        if any(status["status"] != "ok" for status in statuses.values()):
+        if STATUS_STALE in statuses:
+            return HEALTH_SENSOR_STALE
+        if statuses != {STATUS_OK}:
             return HEALTH_ATTENTION
         return HEALTH_OK
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return a compact status report for dashboards and automations."""
-        attributes: dict[str, Any] = {"measurements": self._statuses()}
+        attributes: dict[str, Any] = {"measurements": evaluate(self.hass, self.entry)}
         if self._plantbook_status:
             attributes["plantbook_status"] = self._plantbook_status
         if pid := self._plantbook_info.get("pid"):
@@ -451,39 +314,6 @@ class DiyPlantHealthSensor(DiyPlantEntity):
         if species:
             attributes["plantbook_species"] = species
         return attributes
-
-    def _statuses(self) -> dict[str, dict[str, Any]]:
-        result: dict[str, dict[str, Any]] = {}
-        sun_is_below_horizon = _sun_is_below_horizon(self.hass)
-        for metric, spec in METRICS.items():
-            if not self._source_ids[metric]:
-                continue
-            value, raw, error = _value(
-                self.hass, self._source_ids[metric], metric, self.entry
-            )
-            minimum, maximum, limit_source = self._limits(metric)
-            if value is None:
-                status = "unavailable"
-            elif value < minimum and not (
-                metric == "illuminance" and sun_is_below_horizon
-            ):
-                status = "low"
-            elif value > maximum:
-                status = "high"
-            else:
-                status = "ok"
-            result[metric] = {
-                "entity_id": self._source_ids[metric],
-                "value": value,
-                "raw": raw,
-                "unit": spec["unit"],
-                "minimum": minimum,
-                "maximum": maximum,
-                "limit_source": limit_source,
-                "status": status,
-                "error": error,
-            }
-        return result
 
 
 async def async_setup_entry(
@@ -500,11 +330,6 @@ async def async_setup_entry(
     if illuminance_entity:
         entities.append(DiyPlantDliSensor(hass, entry))
     async_add_entities(entities)
-
-
-def _plantbook_data(entry: ConfigEntry) -> dict[str, Any]:
-    runtime = getattr(entry, "runtime_data", None)
-    return getattr(runtime, "plantbook", None) or {}
 
 
 def _set_plantbook_data(entry: ConfigEntry, plant: dict[str, Any]) -> None:

@@ -28,6 +28,8 @@ class DiyPlantData:
     """State shared between one plant's entities."""
 
     plantbook: dict[str, Any] = field(default_factory=dict)
+    # Last low/high/ok status per measurement, used for hysteresis.
+    limit_status: dict[str, str] = field(default_factory=dict)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

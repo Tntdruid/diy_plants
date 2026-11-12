@@ -58,13 +58,17 @@
           "dli_raw_max": "DLI raw maximum",
           "dli_calibrated_min": "DLI output minimum",
           "dli_calibrated_max": "DLI output maximum",
-          "plantbook_limits": "Use limits from OpenPlantbook"
+          "plantbook_limits": "Use limits from OpenPlantbook",
+          "stale_hours": "Hours before a sensor counts as not updating",
+          "hysteresis_percent": "Hysteresis (% of range)"
         },
         "data_description": {
           "plantbook_enabled": "Requires the OpenPlantbook integration. The plant image and species are added to the health sensor.",
           "plantbook_plant_id": "Exact pid from OpenPlantbook, for example monstera deliciosa. Used before the name.",
           "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used.",
-          "plantbook_limits": "Plantbook's recommended ranges replace the limits below for the measurements Plantbook has values for."
+          "plantbook_limits": "Plantbook's recommended ranges replace the limits below for the measurements Plantbook has values for.",
+          "stale_hours": "A source that has not reported for this long is marked stale. 0 turns the check off.",
+          "hysteresis_percent": "A low or high value must move this far back inside the limits before it counts as OK again, so values near a limit do not flip back and forth. 0 turns it off."
         }
       }
     },
@@ -131,13 +135,17 @@
           "dli_raw_max": "DLI raw maximum",
           "dli_calibrated_min": "DLI output minimum",
           "dli_calibrated_max": "DLI output maximum",
-          "plantbook_limits": "Use limits from OpenPlantbook"
+          "plantbook_limits": "Use limits from OpenPlantbook",
+          "stale_hours": "Hours before a sensor counts as not updating",
+          "hysteresis_percent": "Hysteresis (% of range)"
         },
         "data_description": {
           "plantbook_enabled": "Requires the OpenPlantbook integration. The plant image and species are added to the health sensor.",
           "plantbook_plant_id": "Exact pid from OpenPlantbook, for example monstera deliciosa. Used before the name.",
           "plantbook_plant_name": "Common or scientific name. The first OpenPlantbook search result is used.",
-          "plantbook_limits": "Plantbook's recommended ranges replace the limits below for the measurements Plantbook has values for."
+          "plantbook_limits": "Plantbook's recommended ranges replace the limits below for the measurements Plantbook has values for.",
+          "stale_hours": "A source that has not reported for this long is marked stale. 0 turns the check off.",
+          "hysteresis_percent": "A low or high value must move this far back inside the limits before it counts as OK again, so values near a limit do not flip back and forth. 0 turns it off."
         }
       }
     },
@@ -174,8 +182,26 @@
           "ok": "OK",
           "attention": "Needs attention",
           "sensor_unavailable": "Sensor unavailable",
-          "no_sensors": "No sensors"
+          "no_sensors": "No sensors",
+          "sensor_stale": "Sensor not updating"
         }
+      }
+    },
+    "binary_sensor": {
+      "attention": {
+        "name": "Needs attention"
+      },
+      "needs_water": {
+        "name": "Needs water"
+      },
+      "too_cold": {
+        "name": "Too cold"
+      },
+      "too_dark": {
+        "name": "Too dark"
+      },
+      "sensor_problem": {
+        "name": "Sensor problem"
       }
     }
   }

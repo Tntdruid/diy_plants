@@ -1,20 +1,67 @@
 {
   "entity": {
     "sensor": {
-      "moisture": { "default": "mdi:water-percent" },
-      "conductivity": { "default": "mdi:sprout" },
-      "temperature": { "default": "mdi:thermometer" },
-      "air_temperature": { "default": "mdi:thermometer-lines" },
-      "humidity": { "default": "mdi:water-percent" },
-      "illuminance": { "default": "mdi:brightness-5" },
-      "dli": { "default": "mdi:weather-sunny" },
+      "moisture": {
+        "default": "mdi:water-percent"
+      },
+      "conductivity": {
+        "default": "mdi:sprout"
+      },
+      "temperature": {
+        "default": "mdi:thermometer"
+      },
+      "air_temperature": {
+        "default": "mdi:thermometer-lines"
+      },
+      "humidity": {
+        "default": "mdi:water-percent"
+      },
+      "illuminance": {
+        "default": "mdi:brightness-5"
+      },
+      "dli": {
+        "default": "mdi:weather-sunny"
+      },
       "health": {
         "default": "mdi:heart-pulse",
         "state": {
           "ok": "mdi:flower",
           "attention": "mdi:flower-outline",
           "sensor_unavailable": "mdi:help-circle-outline",
-          "no_sensors": "mdi:sprout-outline"
+          "no_sensors": "mdi:sprout-outline",
+          "sensor_stale": "mdi:timer-sand-empty"
+        }
+      }
+    },
+    "binary_sensor": {
+      "attention": {
+        "default": "mdi:flower",
+        "state": {
+          "on": "mdi:flower-outline"
+        }
+      },
+      "needs_water": {
+        "default": "mdi:water-check",
+        "state": {
+          "on": "mdi:water-alert"
+        }
+      },
+      "too_cold": {
+        "default": "mdi:thermometer-check",
+        "state": {
+          "on": "mdi:snowflake-thermometer"
+        }
+      },
+      "too_dark": {
+        "default": "mdi:white-balance-sunny",
+        "state": {
+          "on": "mdi:weather-night"
+        }
+      },
+      "sensor_problem": {
+        "default": "mdi:access-point-check",
+        "state": {
+          "on": "mdi:access-point-off"
         }
       }
     }

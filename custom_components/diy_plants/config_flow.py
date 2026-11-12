@@ -10,6 +10,7 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_CONDUCTIVITY_SENSOR,
     CONF_DEVICE_LABEL,
+    CONF_HYSTERESIS,
     CONF_AIR_TEMPERATURE_SENSOR,
     CONF_HUMIDITY_SENSOR,
     CONF_ILLUMINANCE_SENSOR,
@@ -19,6 +20,9 @@ from .const import (
     CONF_PLANTBOOK_PLANT_ID,
     CONF_PLANTBOOK_PLANT_NAME,
     CONF_PLANT_NAME,
+    CONF_STALE_HOURS,
+    DEFAULT_HYSTERESIS,
+    DEFAULT_STALE_HOURS,
     CONF_TEMPERATURE_SENSOR,
     DOMAIN,
     METRICS,
@@ -84,6 +88,8 @@ def _base_schema(current: dict | None = None) -> dict:
         if current.get(CONF_ILLUMINANCE_SENSOR)
         else vol.Optional(CONF_ILLUMINANCE_SENSOR): _sensor_selector("illuminance"),
     }
+    schema[vol.Optional(CONF_STALE_HOURS, default=current.get(CONF_STALE_HOURS, DEFAULT_STALE_HOURS))] = vol.All(vol.Coerce(float), vol.Range(min=0))
+    schema[vol.Optional(CONF_HYSTERESIS, default=current.get(CONF_HYSTERESIS, DEFAULT_HYSTERESIS))] = vol.All(vol.Coerce(float), vol.Range(min=0, max=50))
     for metric, spec in METRICS.items():
         schema[vol.Optional(f"{metric}_min", default=current.get(f"{metric}_min", spec["minimum"]))] = vol.Coerce(float)
         schema[vol.Optional(f"{metric}_max", default=current.get(f"{metric}_max", spec["maximum"]))] = vol.Coerce(float)

@@ -58,13 +58,17 @@
           "dli_raw_max": "DLI rå maksimum",
           "dli_calibrated_min": "DLI output minimum",
           "dli_calibrated_max": "DLI output maksimum",
-          "plantbook_limits": "Brug grænser fra OpenPlantbook"
+          "plantbook_limits": "Brug grænser fra OpenPlantbook",
+          "stale_hours": "Timer før en sensor regnes som død",
+          "hysteresis_percent": "Hysterese (% af intervallet)"
         },
         "data_description": {
           "plantbook_enabled": "Kræver OpenPlantbook-integrationen. Plantens billede og art tilføjes sundhedssensoren.",
           "plantbook_plant_id": "Præcis pid fra OpenPlantbook, f.eks. monstera deliciosa. Bruges før navnet.",
           "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges.",
-          "plantbook_limits": "Plantbooks anbefalede intervaller erstatter grænserne nedenfor for de målinger, Plantbook har værdier for."
+          "plantbook_limits": "Plantbooks anbefalede intervaller erstatter grænserne nedenfor for de målinger, Plantbook har værdier for.",
+          "stale_hours": "En kilde, der ikke har rapporteret så længe, markeres som forældet. 0 slår tjekket fra.",
+          "hysteresis_percent": "En for lav eller for høj værdi skal så langt tilbage inden for grænserne, før den regnes som OK igen, så værdier ved en grænse ikke skifter frem og tilbage. 0 slår det fra."
         }
       }
     },
@@ -131,13 +135,17 @@
           "dli_raw_max": "DLI rå maksimum",
           "dli_calibrated_min": "DLI output minimum",
           "dli_calibrated_max": "DLI output maksimum",
-          "plantbook_limits": "Brug grænser fra OpenPlantbook"
+          "plantbook_limits": "Brug grænser fra OpenPlantbook",
+          "stale_hours": "Timer før en sensor regnes som død",
+          "hysteresis_percent": "Hysterese (% af intervallet)"
         },
         "data_description": {
           "plantbook_enabled": "Kræver OpenPlantbook-integrationen. Plantens billede og art tilføjes sundhedssensoren.",
           "plantbook_plant_id": "Præcis pid fra OpenPlantbook, f.eks. monstera deliciosa. Bruges før navnet.",
           "plantbook_plant_name": "Almindeligt eller latinsk navn. Første søgeresultat fra OpenPlantbook bruges.",
-          "plantbook_limits": "Plantbooks anbefalede intervaller erstatter grænserne nedenfor for de målinger, Plantbook har værdier for."
+          "plantbook_limits": "Plantbooks anbefalede intervaller erstatter grænserne nedenfor for de målinger, Plantbook har værdier for.",
+          "stale_hours": "En kilde, der ikke har rapporteret så længe, markeres som forældet. 0 slår tjekket fra.",
+          "hysteresis_percent": "En for lav eller for høj værdi skal så langt tilbage inden for grænserne, før den regnes som OK igen, så værdier ved en grænse ikke skifter frem og tilbage. 0 slår det fra."
         }
       }
     },
@@ -174,8 +182,26 @@
           "ok": "OK",
           "attention": "Kræver opmærksomhed",
           "sensor_unavailable": "Sensor utilgængelig",
-          "no_sensors": "Ingen sensorer"
+          "no_sensors": "Ingen sensorer",
+          "sensor_stale": "Sensor opdaterer ikke"
         }
+      }
+    },
+    "binary_sensor": {
+      "attention": {
+        "name": "Kræver opmærksomhed"
+      },
+      "needs_water": {
+        "name": "Kræver vand"
+      },
+      "too_cold": {
+        "name": "For koldt"
+      },
+      "too_dark": {
+        "name": "For mørkt"
+      },
+      "sensor_problem": {
+        "name": "Sensorproblem"
       }
     }
   }

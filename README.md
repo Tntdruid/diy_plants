@@ -28,6 +28,8 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 - Health entity with per-measurement status and diagnostics
 - Health entity exposes the Plantbook plant image and species when Plantbook is enabled
 - Plant limits from OpenPlantbook, with your own limits as fallback
+- Problem binary sensors, stale sensor detection and hysteresis
+- Notification blueprint
 - Plantbook species lookup uses Home Assistant's OpenPlantbook integration; no API key is stored by DIY Plants
 - Raw source values preserved in attributes for troubleshooting
 - Duplicate sensor protection so the same entity cannot be assigned to multiple measurements
@@ -41,9 +43,38 @@ Choose any sensor entity for the available measurements. Conductivity is normali
 | `ok` | OK | All configured measurements are within their limits |
 | `attention` | Needs attention | At least one measurement is too low or too high |
 | `sensor_unavailable` | Sensor unavailable | At least one source sensor has no usable value |
+| `sensor_stale` | Sensor not updating | At least one source sensor has stopped reporting (see below) |
 | `no_sensors` | No sensors | No source sensors are configured |
 
 Automations and templates should compare against the state value, for example `is_state('sensor.monstera_health', 'attention')`.
+
+## Problem sensors
+
+Each plant gets binary sensors (device class `problem`) for simple automations. Only the ones that fit the plant's configured measurements are created:
+
+| Sensor | On when |
+|---|---|
+| Needs attention | Any measurement is too low or too high |
+| Needs water | Soil moisture is too low |
+| Too cold | Soil or air temperature is too low |
+| Too dark | Illuminance is too low (ignored after sunset) |
+| Sensor problem | A source sensor is unavailable or has stopped reporting |
+
+Each sensor's `measurements` attribute names the measurements that cause the problem.
+
+### Sensors that stop reporting
+
+DIY sensors often keep their last value when they go offline, so the plant would look fine while nobody is watching it. A source that has not reported for **6 hours** (configurable, `0` turns it off) is marked `stale`, the health sensor shows `sensor_stale`, and **Sensor problem** turns on. A sensor that reports the same value again counts as fresh.
+
+### Hysteresis
+
+A value that is too low or too high has to move **5 %** of the limit range back inside the limits before it counts as OK again (configurable, `0` turns it off). With limits of 20–70 % soil moisture, a plant that dropped below 20 % needs water until it is back above 22.5 %. This stops the health sensor and the problem sensors from flipping back and forth when a value sits right at a limit.
+
+### Notification blueprint
+
+[![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FTntdruid%2Fdiy_plants%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdiy_plants%2Fplant_needs_attention.yaml)
+
+The **DIY Plants – plant needs attention** blueprint sends a phone notification when one or more problem sensors have been on for a while (1 hour by default), and optionally when they clear again.
 
 ## OpenPlantbook
 
@@ -203,6 +234,13 @@ The mapping is linear and is clamped to the configured output range. The raw val
 The integration currently uses default limits as starting points. Calibration transforms, smoothing, hysteresis, and irrigation actions are planned next.
 
 ## What’s new
+
+### 0.5.0
+
+- Problem binary sensors: Needs attention, Needs water, Too cold, Too dark and Sensor problem.
+- Sources that stop reporting are detected; the health sensor shows `sensor_stale`.
+- Hysteresis stops statuses from flipping at a limit.
+- Notification blueprint for plants that need attention.
 
 ### 0.4.1
 

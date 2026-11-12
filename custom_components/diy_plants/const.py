@@ -10,7 +10,7 @@ from homeassistant.const import (
 )
 
 DOMAIN = "diy_plants"
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 CARD_FILENAME = "diy-plants-card.js"
 CARD_URL = f"/{DOMAIN}/{CARD_FILENAME}"
@@ -32,6 +32,10 @@ CONF_PLANTBOOK_PLANT_ID = "plantbook_plant_id"
 CONF_PLANTBOOK_ENABLED = "plantbook_enabled"
 CONF_PLANTBOOK_PLANT_NAME = "plantbook_plant_name"
 CONF_PLANTBOOK_LIMITS = "plantbook_limits"
+CONF_STALE_HOURS = "stale_hours"
+CONF_HYSTERESIS = "hysteresis_percent"
+DEFAULT_STALE_HOURS = 6.0
+DEFAULT_HYSTERESIS = 5.0
 SIGNAL_PLANTBOOK_UPDATED = f"{DOMAIN}_plantbook_updated_{{}}"
 DEFAULT_LUX_TO_PPFD = 0.0185
 

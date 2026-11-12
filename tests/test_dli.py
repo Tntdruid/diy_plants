@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from custom_components.diy_plants.const import CONF_DLI_SENSOR, METRICS
-from custom_components.diy_plants.sensor import _sun_is_below_horizon
+from custom_components.diy_plants.status import _sun_is_below_horizon
 
 
 def test_dli_metric_exists():

@@ -1,0 +1,73 @@
+blueprint:
+  name: DIY Plants – plant needs attention
+  description: >-
+    Send a notification when a DIY Plants problem sensor (for example
+    "Needs water", "Too cold" or "Sensor problem") has been on for a while,
+    and optionally when it clears again.
+  domain: automation
+  source_url: https://github.com/Tntdruid/diy_plants/blob/main/blueprints/automation/diy_plants/plant_needs_attention.yaml
+  input:
+    problem_sensors:
+      name: Problem sensors
+      description: One or more DIY Plants problem sensors to watch.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: diy_plants
+              domain: binary_sensor
+    duration:
+      name: On for at least
+      description: Only notify when the problem has lasted this long.
+      default:
+        hours: 1
+      selector:
+        duration:
+    notify_device:
+      name: Device to notify
+      description: A phone or tablet with the Home Assistant app.
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+    notify_when_resolved:
+      name: Notify when resolved
+      default: false
+      selector:
+        boolean:
+
+mode: queued
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input problem_sensors
+    to: "on"
+    for: !input duration
+    id: problem
+  - platform: state
+    entity_id: !input problem_sensors
+    from: "on"
+    to: "off"
+    id: resolved
+
+variables:
+  notify_when_resolved: !input notify_when_resolved
+
+condition:
+  - condition: template
+    value_template: "{{ trigger.id == 'problem' or notify_when_resolved }}"
+
+action:
+  - domain: mobile_app
+    type: notify
+    device_id: !input notify_device
+    title: "{{ device_attr(device_id(trigger.entity_id), 'name') or 'Plant' }}"
+    message: >-
+      {% if trigger.id == 'problem' %}
+      {{ state_attr(trigger.entity_id, 'friendly_name') }}
+      {%- set m = state_attr(trigger.entity_id, 'measurements') or {} %}
+      {%- for name, info in m.items() %} · {{ name }}: {{ info.value if info.value is not none else info.status }}{% endfor %}
+      {% else %}
+      {{ state_attr(trigger.entity_id, 'friendly_name') }}: OK again
+      {% endif %}

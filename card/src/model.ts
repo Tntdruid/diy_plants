@@ -92,7 +92,7 @@ export function measurementPercent(measurement: Measurement): number | null {
 }
 
 export function measurementStatus(measurement: Measurement): 'good' | 'bad' | 'unavailable' {
-  if (measurement.status === 'unavailable' || typeof measurement.value !== 'number' || !Number.isFinite(measurement.value)) {
+  if (measurement.status === 'unavailable' || measurement.status === 'stale' || typeof measurement.value !== 'number' || !Number.isFinite(measurement.value)) {
     return 'unavailable';
   }
   if (measurement.status === 'low' || measurement.status === 'high') return 'bad';
