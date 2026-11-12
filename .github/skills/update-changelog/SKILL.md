@@ -23,3 +23,5 @@ Update this repository's changelog accurately and with minimal noise.
 
 - This repository contains the DIY Plants Home Assistant integration (`custom_components/diy_plants`) and its Lovelace card source (`card/`).
 - `custom_components/diy_plants/frontend/diy-plants-card.js` is a generated bundle built from `card/`; avoid treating bundle-only churn as a user-facing changelog entry.
+- `CHANGELOG.md` has one `## [x.y.z] - YYYY-MM-DD` section per released version, newest first, with a link reference at the bottom.
+- To release: bump `version` in `custom_components/diy_plants/manifest.json`, add the matching changelog section, commit, then push a `vX.Y.Z` tag. The Release workflow checks that the tag matches the manifest and publishes the changelog section as the GitHub release notes.

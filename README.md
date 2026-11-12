@@ -233,44 +233,9 @@ The mapping is linear and is clamped to the configured output range. The raw val
 
 The integration currently uses default limits as starting points. Calibration transforms, smoothing, hysteresis, and irrigation actions are planned next.
 
-## What’s new
+## Changelog
 
-### 0.5.0
-
-- Problem binary sensors: Needs attention, Needs water, Too cold, Too dark and Sensor problem.
-- Sources that stop reporting are detected; the health sensor shows `sensor_stale`.
-- Hysteresis stops statuses from flipping at a limit.
-- Notification blueprint for plants that need attention.
-
-### 0.4.1
-
-- The card URL now includes the integration version, so browsers never reuse a cached copy from an older install. Fixes "Custom element doesn't exist: diy-plants-card" after an update.
-- A stale gzip copy of the card is removed at startup.
-
-### 0.4.0
-
-- Plant limits can come from OpenPlantbook. Enabled by default when the Plantbook lookup is on; each measurement shows its `limit_source`.
-
-### 0.3.0
-
-- Fixed the OpenPlantbook lookup: it now waits for OpenPlantbook to load, uses the plant ID field, searches by name, and reports its result in `plantbook_status`.
-- The DIY Plants dashboard card is now bundled with the integration, and its dashboard resource is added automatically.
-- **Breaking:** the health sensor states are now `ok`, `attention`, `sensor_unavailable` and `no_sensors` (previously `OK`, `Attention`, `Unavailable` and `No sensors`). Update automations that compare against the old values.
-- Measurement and DLI sensors now have device and state classes, so they get long-term statistics, proper graphs and unit conversion. They are no longer hidden as diagnostic entities.
-- Entity names and health states are translated (Danish and English).
-- Fixed the DLI value being reset to 0 when Home Assistant restarts.
-- DLI now resets exactly at midnight instead of checking every minute.
-- Added downloadable diagnostics and hassfest validation.
-- Requires Home Assistant 2024.11 or newer.
-
-### Earlier
-
-- Suppressed low illuminance warnings after sunset; warnings resume at sunrise
-- Added DLI support as a plant metric
-- Added duplicate sensor protection to avoid assigning the same entity to multiple measurements
-- Added Danish and English translations for the config flow
-- Stabilized the config and options flow for calibration settings
-- Improved HACS compatibility metadata
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version. Releases are published on the [releases page](https://github.com/Tntdruid/diy_plants/releases), and HACS shows the release notes when an update is available.
 
 ## Notes
 
